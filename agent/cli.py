@@ -30,3 +30,5 @@ if __name__ == "__main__":
             print(saf3ai_setup.run_turn(agent.answer, message, conversation_id))
         except saf3ai_setup.PolicyBlocked as blocked:
             print(f"[blocked by Saf3AI at {blocked.stage}: {', '.join(blocked.reasons)}]")
+        except Exception as exc:  # LLM provider error - keep the chat going
+            print(f"[LLM call failed: {str(exc)[:200]}]")

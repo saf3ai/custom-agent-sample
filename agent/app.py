@@ -56,4 +56,11 @@ def chat(req: ChatRequest):
             "reasons": blocked.reasons,
             "conversation_id": conversation_id,
         })
+    except Exception as exc:  # the LLM provider (or a tool) failed; the Saf3AI scan already ran
+        logging.getLogger("agent").warning("LLM call failed: %s", str(exc)[:300])
+        return JSONResponse(status_code=502, content={
+            "error": "llm_unavailable",
+            "detail": str(exc)[:300],
+            "conversation_id": conversation_id,
+        })
     return {"reply": reply, "conversation_id": conversation_id}

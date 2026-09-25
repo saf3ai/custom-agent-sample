@@ -890,10 +890,18 @@ def verify(url, extra, enforcement, dry, target):
         results = []
         for label, msg, want in [("Normal question", BENIGN, 200), ("Prompt injection", INJECTION, expect_block)]:
             status, body = http("POST", f"{url}/chat", {"message": msg, "user_id": "deploy-wizard"}, headers, timeout=120)
-            results.append((label, want, status, "PASS" if status == want else "FAIL"))
+            results.append((label, want, status, "PASS" if status == want else "FAIL", body))
         say(f"\n  {'Check':<18}{'Expected':<10}{'Got':<8}Result")
         for row in results:
             say(f"  {row[0]:<18}{row[1]:<10}{str(row[2]):<8}{row[3]}")
+        if results[0][2] == 502:
+            try:
+                detail = json.loads(results[0][4]).get("detail", "")
+            except ValueError:
+                detail = results[0][4]
+            say("\n  Saf3AI did its part (the question was scanned and allowed), but the LLM provider failed:")
+            say(f"    {detail[:240]}")
+            say("  Retry in a minute, or re-run and pick another model or provider.")
         say("\n  Saf3AI console > Custom Agents > Log Tracer shows both conversations; "
             "the injection is flagged with its threat category.")
     finally:
