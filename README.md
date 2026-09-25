@@ -50,6 +50,25 @@ python deploy.py --destroy    # remove it again
 - Keys go straight to the platform's secret store. They're never written into the kit or the answers file; the AWS and Kubernetes steps read them from a short-lived owner-only temp file that's deleted right after. Your other answers are saved to `saf3ai-deploy.json` for re-runs and `--destroy`.
 - Azure targets use Terraform, and Terraform keeps the key values in its state file. Keep that file private.
 
+## Run as a container (env vars only)
+
+The image starts the API on `$PORT` (8080) with the Saf3AI SaaS endpoints built in. Pass keys as environment variables; nothing else is needed.
+
+```bash
+docker build -t saf3ai-sample-agent ./agent        # or agent-variants/<framework>
+docker run -p 8080:8080 -e SAF3AI_API_KEY=<key> -e LLM_PROVIDER=gemini -e GEMINI_API_KEY=<key> saf3ai-sample-agent
+```
+
+| Variable | Needed | Default in the image |
+|---|---|---|
+| `SAF3AI_API_KEY` | **Yes** | none. The agent exits with a clear message if it's missing |
+| `LLM_PROVIDER` + that provider's key | For a real LLM | `mock` (no key; proves the Saf3AI wiring) |
+| `SAF3AI_AGENT_ID`, `LLM_MODEL` | Optional | `sample-support-agent`, provider default |
+| `SAF3AI_COLLECTOR_AGENT`, `SAF3AI_SCANNER_ENDPOINT` | Optional | Saf3AI SaaS endpoints |
+| `SAF3AI_ENFORCEMENT`, `SAF3AI_FAIL_MODE`, `SAF3AI_ENVIRONMENT` | Optional | `block`, `open`, `production` |
+
+- In the cloud, keep the keys in the platform's secret store; each `deploy/` folder shows how.
+
 ## Quick start (local, 5 minutes)
 
 ```bash

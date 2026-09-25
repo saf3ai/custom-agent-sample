@@ -1,9 +1,17 @@
 FROM python:3.12-slim
 
+LABEL org.opencontainers.image.source="https://github.com/saf3ai/custom-agent-sample" \
+      org.opencontainers.image.description="Saf3AI sample agent (Google ADK). Set SAF3AI_API_KEY (+ LLM_PROVIDER and its key); serves POST /chat on $PORT"
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PORT=8080
+    PORT=8080 \
+    SAF3AI_COLLECTOR_AGENT=https://analyzer.saf3ai.com/v1/traces \
+    SAF3AI_SCANNER_ENDPOINT=https://scanner.saf3ai.com \
+    SAF3AI_ENVIRONMENT=production \
+    SAF3AI_ENFORCEMENT=block \
+    SAF3AI_FAIL_MODE=open
 
 WORKDIR /app
 

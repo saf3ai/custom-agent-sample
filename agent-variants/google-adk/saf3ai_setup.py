@@ -82,10 +82,14 @@ def start(expected_framework: str = "adk") -> None:
     global _started
     if _started:
         return
+    missing = [v for v in ("SAF3AI_API_KEY", "SAF3AI_COLLECTOR_AGENT") if not os.getenv(v, "").strip()]
+    if missing:
+        raise SystemExit(f"Saf3AI: set {' and '.join(missing)} (e.g. docker run -e SAF3AI_API_KEY=...). "
+                         "Get the key in the Saf3AI console > Integrations > SDK > Custom Agent SDK.")
     init(
         agent_id=AGENT_ID,
         api_key=API_KEY,
-        safeai_collector_agent=os.environ["SAF3AI_COLLECTOR_AGENT"],
+        safeai_collector_agent=os.getenv("SAF3AI_COLLECTOR_AGENT", "").strip(),
         service_name=os.getenv("SAF3AI_SERVICE_NAME", AGENT_ID),
         environment=os.getenv("SAF3AI_ENVIRONMENT", "production"),
         scanner_endpoint=SCANNER or None,
