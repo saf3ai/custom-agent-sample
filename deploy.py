@@ -178,6 +178,10 @@ def choose(title, options, default=None):
                 say(f"  Not available: {why}")
                 continue
             return key
+        if len(pick) >= 20:
+            say("  That looks like a key or token - it was ignored, not saved. Menu input is not hidden, so it\n"
+                "  is visible in this terminal's history: rotate it if it's real. Keys go only at '(hidden)' prompts.")
+            continue
         say("  Enter a number from the list.")
 
 
@@ -1005,6 +1009,9 @@ def main():
     if url and url != "port-forward":
         say(f"\n  Agent URL: {url}   (POST {url}/chat)")
     verify(url, extra, a["enforcement"], args.dry_run, t)
+    if args.dry_run:
+        say("\n  Dry run finished - nothing was changed. Run again without --dry-run to deploy.")
+        return
     proc = extra.get("proc")
     if proc:
         say(f"\n  Agent running at {url}  (POST {url}/chat). Press Ctrl+C to stop.")
