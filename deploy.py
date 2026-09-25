@@ -403,17 +403,22 @@ def ask_agent(a):
     previous = a.get("provider")
     a["provider"] = choose("LLM", opts, previous)
     same = a.get("model_provider") == a["provider"]  # saved values belong to this provider?
-    saved_model = a.get("model") if same else None
+    saved_model = a.get("model") if same and not str(a.get("model", "")).isdigit() else None
     saved_extra = (a.get("extra") or {}) if same else {}
     spec = PROVIDERS[a["provider"]]
     if a["provider"] == "mock":
         a["model"] = spec["model"]
-    elif spec["model"] is None:  # no sensible default exists (e.g. your Azure deployment name)
-        a["model"] = ask(f"Model - {spec['hint']}", saved_model)
     else:
-        if spec.get("hint"):
+        if spec["model"] is not None and spec.get("hint"):
             say(f"  {spec['hint']}")
-        a["model"] = ask("Model", saved_model or spec["model"])
+        while True:
+            if spec["model"] is None:  # no sensible default (e.g. your Azure deployment name)
+                a["model"] = ask(f"Model - {spec['hint']}", saved_model)
+            else:
+                a["model"] = ask("Model", saved_model or spec["model"])
+            if not a["model"].isdigit():
+                break
+            say("  That's a menu number, not a model name - type a model name, or press Enter for the default.")
     a["model_provider"] = a["provider"]
     a["extra"] = {}
     for var, question, dflt in spec.get("extra", []):
