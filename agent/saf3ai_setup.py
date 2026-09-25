@@ -10,6 +10,7 @@ can lift this file into your own agent unchanged.
 
 Tested with saf3ai-sdk 0.2.4 (PyPI).
 """
+import json
 import logging
 import os
 import threading
@@ -97,6 +98,25 @@ def findings(scan: Optional[dict]) -> list:
     return list(dict.fromkeys(hits))
 
 
+_SCAN_KEYS = ("status", "detection_results", "custom_rule_matches", "OutofScopeAnalysis",
+              "threats", "categories", "scan_metadata")
+
+
+def _record_scan(stage: str, scan: dict, span) -> None:
+    """Attach the scan result to the span: the Saf3AI console reads it for the matched
+    rules, threat category, severity and scan time."""
+    if span is None or not span.is_recording():
+        return
+    key = "security.scan" if stage == "prompt" else "security.response_scan"
+    payload = json.dumps(scan, default=str)
+    if len(payload) > 16000:  # keep valid JSON: drop bulky extras rather than truncate
+        payload = json.dumps({k: scan[k] for k in _SCAN_KEYS if k in scan}, default=str)
+    span.set_attribute(f"{key}.full_results", payload)
+    duration = (scan.get("scan_metadata") or {}).get("duration_ms")
+    if isinstance(duration, (int, float)):
+        span.set_attribute(f"{key}.duration_ms", float(duration))
+
+
 def _enforce(stage: str, scan: Optional[dict], span) -> None:
     if not SCANNER:
         return
@@ -105,6 +125,7 @@ def _enforce(stage: str, scan: Optional[dict], span) -> None:
             raise PolicyBlocked(stage, ["scanner_unavailable"])
         log.warning("Saf3AI scan unavailable at %s - allowed (SAF3AI_FAIL_MODE=open)", stage)
         return
+    _record_scan(stage, scan, span)
     hits = findings(scan)
     if not hits:
         return
@@ -114,6 +135,7 @@ def _enforce(stage: str, scan: Optional[dict], span) -> None:
     if ENFORCEMENT == "block":
         if span is not None and span.is_recording():
             span.set_attribute("security.blocked_by", "saf3ai_policy")
+            span.set_attribute("security.blocked_before_llm", stage == "prompt")
         raise PolicyBlocked(stage, hits)
     log.warning("Saf3AI flagged %s (%s) - allowed (SAF3AI_ENFORCEMENT=monitor)", stage, ",".join(hits))
 
