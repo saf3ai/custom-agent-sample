@@ -1,0 +1,21 @@
+# Only for EKS Pod Identity (not needed with IRSA): lets the pod reach the
+# EKS Pod Identity Agent on the node's link-local address.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: saf3ai-agent-eks-pod-identity
+  labels:
+    app.kubernetes.io/name: saf3ai-agent
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: saf3ai-agent
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 169.254.170.23/32
+      ports:
+        - protocol: TCP
+          port: 80

@@ -1,0 +1,36 @@
+# GKE: image from Artifact Registry, Gemini on Vertex AI via GKE Workload Identity. No LLM key.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: saf3ai-agent
+
+resources:
+  - ../../base
+  - networkpolicy-metadata.yaml
+
+images:
+  - name: saf3ai-sample-agent
+    newName: <REGION>-docker.pkg.dev/<PROJECT_ID>/<REPOSITORY>/saf3ai-sample-agent
+    newTag: "1.0.0"
+
+configMapGenerator:
+  - name: saf3ai-agent-config
+    namespace: saf3ai-agent
+    behavior: merge
+    literals:
+      - LLM_PROVIDER=vertex
+      - LLM_MODEL=<VERTEX_GEMINI_MODEL_ID>
+      - GOOGLE_CLOUD_PROJECT=<PROJECT_ID>
+      - GOOGLE_CLOUD_LOCATION=global
+
+patches:
+  - target:
+      kind: ServiceAccount
+      name: saf3ai-agent
+    patch: |-
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: saf3ai-agent
+        annotations:
+          iam.gke.io/gcp-service-account: saf3ai-agent@<PROJECT_ID>.iam.gserviceaccount.com

@@ -1,0 +1,50 @@
+# AKS: image from ACR, Azure OpenAI, Azure Workload Identity on the pod.
+# The sample's azure-openai provider authenticates with AZURE_OPENAI_API_KEY (put it in base/secret.env).
+# The workload identity lets the pod read Azure resources such as Key Vault
+# (e.g. via the Secrets Store CSI driver) instead of holding keys in a Kubernetes Secret.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: saf3ai-agent
+
+resources:
+  - ../../base
+
+images:
+  - name: saf3ai-sample-agent
+    newName: <ACR_NAME>.azurecr.io/saf3ai-sample-agent
+    newTag: "1.0.0"
+
+configMapGenerator:
+  - name: saf3ai-agent-config
+    namespace: saf3ai-agent
+    behavior: merge
+    literals:
+      - LLM_PROVIDER=azure-openai
+      - LLM_MODEL=<AZURE_OPENAI_DEPLOYMENT_NAME>
+      - AZURE_OPENAI_ENDPOINT=https://<AZURE_OPENAI_RESOURCE>.openai.azure.com
+
+patches:
+  - target:
+      kind: ServiceAccount
+      name: saf3ai-agent
+    patch: |-
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: saf3ai-agent
+        annotations:
+          azure.workload.identity/client-id: <MANAGED_IDENTITY_CLIENT_ID>
+  - target:
+      kind: Deployment
+      name: saf3ai-agent
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: saf3ai-agent
+      spec:
+        template:
+          metadata:
+            labels:
+              azure.workload.identity/use: "true"

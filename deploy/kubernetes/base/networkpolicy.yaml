@@ -1,0 +1,44 @@
+# Enforced only if the cluster runs a NetworkPolicy engine
+# (EKS: VPC CNI network policy enabled; AKS: Azure NPM / Calico / Cilium; GKE: Dataplane V2 or network policy enabled).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: saf3ai-agent
+  labels:
+    app.kubernetes.io/name: saf3ai-agent
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: saf3ai-agent
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Callers: any pod in this namespace.
+    # Exposing via Ingress? Add the ingress controller's namespace, e.g.
+    #   - namespaceSelector:
+    #       matchLabels:
+    #         kubernetes.io/metadata.name: <INGRESS_CONTROLLER_NAMESPACE>
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # HTTPS to analyzer.saf3ai.com, scanner.saf3ai.com and your LLM API.
+    # Vanilla NetworkPolicy cannot match hostnames. To pin these FQDNs use
+    # CiliumNetworkPolicy (toFQDNs), Calico DNS policy, or an egress proxy / firewall.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+        - ipBlock:
+            cidr: "::/0"
+      ports:
+        - protocol: TCP
+          port: 443

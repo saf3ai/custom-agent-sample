@@ -1,0 +1,41 @@
+# Copy to terraform.tfvars and replace the <placeholders>.
+# Keys and tokens do NOT go here - they go in the Secrets Manager secret (README, Deploy step 3).
+
+region = "us-east-1"
+name   = "saf3ai-sample-agent"
+
+vpc_id              = "vpc-<id>"
+alb_subnet_ids      = ["subnet-<az-a>", "subnet-<az-b>"] # public for an internet-facing ALB
+service_subnet_ids  = ["subnet-<az-a>", "subnet-<az-b>"] # private with NAT, or public + assign_public_ip
+assign_public_ip    = false
+internal_alb        = false
+allowed_cidr_blocks = ["<caller-cidr>"] # who may call the ALB
+certificate_arn     = ""                # ACM certificate ARN to serve HTTPS; empty = HTTP only
+
+cpu              = 512
+memory           = 1024
+cpu_architecture = "X86_64"
+desired_count    = 1
+
+agent_env = {
+  SAF3AI_COLLECTOR_AGENT  = "https://analyzer.saf3ai.com/v1/traces"
+  SAF3AI_SCANNER_ENDPOINT = "https://scanner.saf3ai.com"
+  SAF3AI_AGENT_ID         = "sample-support-agent"
+  SAF3AI_SERVICE_NAME     = "sample-support-agent"
+  SAF3AI_ENVIRONMENT      = "production"
+  SAF3AI_ENFORCEMENT      = "block" # block | monitor
+  SAF3AI_FAIL_MODE        = "open"  # open | closed
+  LLM_PROVIDER            = "mock"  # see ../../docs/provider-matrix.md
+  # LLM_MODEL             = "<model-or-deployment-id>"
+}
+
+# Every key listed here must exist in the secret JSON.
+secret_keys = ["SAF3AI_API_KEY"] # e.g. ["SAF3AI_API_KEY", "ANTHROPIC_API_KEY"]
+
+# LLM_PROVIDER = "bedrock": no key needed - the task role calls Bedrock.
+enable_bedrock = false
+# bedrock_model_arns = ["arn:aws:bedrock:us-east-1::foundation-model/<model-id>"]
+
+tags = {
+  # owner = "<team>"
+}

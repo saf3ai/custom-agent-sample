@@ -1,0 +1,14 @@
+# Saf3AI SDK (PyPI)
+saf3ai-sdk==0.2.4
+
+# Agent framework (OpenAI models built in). Tested with 1.15.22.
+# For Gemini use crewai[google-genai]; for Claude use crewai[anthropic].
+crewai>=1.15,<2
+
+# HTTP service
+fastapi>=0.110
+uvicorn>=0.29
+python-dotenv>=1.0
+
+# Do NOT add google-adk: the Saf3AI SDK picks its integration from the installed
+# packages, and Google ADK takes priority over CrewAI.

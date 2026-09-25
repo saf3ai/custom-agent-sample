@@ -1,0 +1,16 @@
+# Local secrets - never commit
+.env
+secret.env
+secret.json
+*.tfvars
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
