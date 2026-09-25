@@ -134,10 +134,19 @@ def header(n, title):
     say(f"\n== {n}. {title} " + "=" * max(4, 60 - len(title)))
 
 
+def clean(value, secret=False):
+    """Drop control characters: some terminals insert ^V when you paste with Ctrl+V."""
+    kept = "".join(ch for ch in value if ch.isprintable()).strip()
+    if len(kept) != len(value.strip()):
+        say(f"  (removed {len(value.strip()) - len(kept)} invisible control character(s) from the "
+            f"{'pasted key' if secret else 'input'} - usually a Ctrl+V artefact)")
+    return kept
+
+
 def ask(prompt, default=None, required=True):
     suffix = f" [{default}]" if default not in (None, "") else ""
     while True:
-        value = input(f"  {prompt}{suffix}: ").strip()
+        value = clean(input(f"  {prompt}{suffix}: "))
         if not value and default is not None:
             return str(default)
         if value or not required:
@@ -148,9 +157,9 @@ def ask(prompt, default=None, required=True):
 def ask_secret(prompt, env_var=None, required=True):
     if env_var and os.getenv(env_var):
         if confirm(f"Use {env_var} from your environment?", True):
-            return os.environ[env_var]
+            return clean(os.environ[env_var], secret=True)
     while True:
-        value = getpass.getpass(f"  {prompt} (hidden): ").strip()
+        value = clean(getpass.getpass(f"  {prompt} (hidden, paste with right-click): "), secret=True)
         if value or not required:
             return value
         say("  (required)")
@@ -258,8 +267,10 @@ def secret_tempfile(content):
 
 def http(method, url, body=None, headers=None, timeout=20):
     data = json.dumps(body).encode() if body is not None else None
+    # An explicit User-Agent: the Saf3AI edge blocks Python's default urllib signature
     req = urllib.request.Request(url, data=data, method=method,
-                                 headers={"Content-Type": "application/json", **(headers or {})})
+                                 headers={"Content-Type": "application/json",
+                                          "User-Agent": "saf3ai-deploy-wizard/1.0", **(headers or {})})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.status, r.read().decode(errors="replace")
@@ -305,18 +316,32 @@ def ask_saf3ai(a, dry):
     a["fail_mode"] = choose("If the Saf3AI scanner can't be reached", [("open", "open - allow the turn", None),
                                                                         ("closed", "closed - block the turn", None)],
                             a.get("fail_mode", "open"))
-    if not dry and confirm("Check the key now with one test scan ('hello')?", True):
-        status, _ = http("POST", SCANNER + "/scan",
-                         {"prompt": "hello", "response": "", "model": "deploy-wizard",
-                          "metadata": {"agent_identifier": a["agent_id"]}},
-                         {"X-API-Key": key, "Authorization": f"Bearer {key}"})
-        if status == 200:
-            say("  Key OK - scanner reachable.")
-        elif status in (401, 403):
-            raise SystemExit("  The scanner rejected this key. Check it in the console and re-run.")
+    if not dry and confirm("Check the key and the connection to Saf3AI now?", True):
+        auth = {"X-API-Key": key, "Authorization": f"Bearer {key}"}
+        # The collector authenticates the key; an empty trace batch writes nothing
+        req = urllib.request.Request(COLLECTOR, data=b"", method="POST", headers={
+            "Content-Type": "application/x-protobuf", "User-Agent": "saf3ai-deploy-wizard/1.0", **auth})
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                c_status = resp.status
+        except urllib.error.HTTPError as e:
+            c_status = e.code
+        except (urllib.error.URLError, OSError):
+            c_status = None
+        s_status, s_body = http("POST", SCANNER + "/scan",
+                                {"prompt": "hello", "response": "", "model": "deploy-wizard",
+                                 "metadata": {"agent_identifier": a["agent_id"]}}, auth)
+        if c_status in (401, 403):
+            say("  API key:  REJECTED by Saf3AI - copy it again from the console (paste with right-click).")
+            if not confirm("Continue anyway?", False):
+                raise SystemExit("  Stopped - nothing was changed.")
         else:
-            say(f"  Could not confirm ({status or 'no connection'}). Outbound HTTPS to scanner.saf3ai.com "
-                "must be open where the agent runs; continuing.")
+            say(f"  API key:  {'accepted' if c_status else 'could not check (no connection to ' + COLLECTOR + ')'}")
+        if s_status == 200:
+            say("  Scanner:  reachable")
+        else:
+            say(f"  Scanner:  HTTP {s_status or 'no connection'} {s_body.strip()[:120]}")
+            say("            Outbound HTTPS to the scanner must work where the agent runs; continuing.")
     return key
 
 
