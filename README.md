@@ -37,9 +37,9 @@ python deploy.py --destroy    # remove it again
 | Step | You choose / it does |
 |---|---|
 | 1 | Checks your tools (docker, terraform, aws, az, gcloud, kubectl, git, bash) and which accounts you're signed in to |
-| 2 | Saf3AI API key (typed hidden) + agent id + enforcement. One test scan confirms the key and network |
+| 2 | Saf3AI API key (pasted) + agent id + enforcement. One test scan confirms the key and network |
 | 3 | Cloud → service: this machine (plain Python, no Docker / Docker / Linux VM service), AWS, Azure, Google Cloud, Hugging Face, any Kubernetes |
-| 4 | Framework → LLM (only valid combinations are offered) → model → LLM key (hidden) |
+| 4 | Framework → LLM (only valid combinations are offered) → model → LLM key |
 | 5 | Target details (region, project, network, names) with defaults |
 | 6 | Review. Nothing happens until you confirm |
 | 7 | Builds and pushes the image, stores keys in the platform's secret store, deploys |

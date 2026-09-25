@@ -8,7 +8,7 @@ Saf3AI Custom Agent - guided deployment.
     python deploy.py --destroy          remove what the saved answers deployed
     python deploy.py --yes              don't stop at Terraform's own approval prompt
 
-Standard library only (Python 3.9+). Keys are typed hidden, handed to the tools
+Standard library only (Python 3.9+). Keys are shown as you paste them, handed to the tools
 through environment variables or stdin, and never saved. Answers without keys
 are saved to saf3ai-deploy.json for re-runs and --destroy.
 """
@@ -158,61 +158,6 @@ def ask(prompt, default=None, required=True):
         say("  (required)")
 
 
-def masked_input(prompt):
-    """Read a secret showing one * per character, so a paste is visible but the key is not."""
-    sys.stdout.write(prompt)
-    sys.stdout.flush()
-    if not sys.stdin.isatty():  # piped input, or a terminal without a real console (e.g. Git Bash)
-        return sys.stdin.readline().rstrip("\r\n")
-    chars = []
-
-    def backspace():
-        if chars:
-            chars.pop()
-            sys.stdout.write("\b \b")
-
-    if IS_WINDOWS:
-        import msvcrt
-        while True:
-            ch = msvcrt.getwch()
-            if ch in ("\r", "\n"):
-                break
-            if ch == "\x03":
-                raise KeyboardInterrupt
-            if ch in ("\x00", "\xe0"):  # arrow / function keys send a second code
-                msvcrt.getwch()
-            elif ch == "\x08":
-                backspace()
-            elif ch.isprintable():      # control chars such as ^V from Ctrl+V are dropped
-                chars.append(ch)
-                sys.stdout.write("*")
-            sys.stdout.flush()
-    else:
-        import termios
-        import tty
-        fd = sys.stdin.fileno()
-        old = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            while True:
-                ch = sys.stdin.read(1)
-                if ch in ("\r", "\n", ""):
-                    break
-                if ch == "\x03":
-                    raise KeyboardInterrupt
-                if ch in ("\x7f", "\x08"):
-                    backspace()
-                elif ch.isprintable():
-                    chars.append(ch)
-                    sys.stdout.write("*")
-                sys.stdout.flush()
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old)
-    sys.stdout.write("\n")
-    sys.stdout.flush()
-    return "".join(chars)
-
-
 def show_received(value):
     if value:
         tail = f", ends ...{value[-4:]}" if len(value) >= 12 else ""
@@ -226,7 +171,7 @@ def ask_secret(prompt, env_var=None, required=True):
             show_received(value)
             return value
     while True:
-        value = clean(masked_input(f"  {prompt} (paste, then Enter): "), secret=True)
+        value = clean(input(f"  {prompt} (paste, then Enter): "), secret=True)
         show_received(value)
         if value or not required:
             return value
@@ -256,8 +201,8 @@ def choose(title, options, default=None):
                 continue
             return key
         if len(pick) >= 20:
-            say("  That looks like a key or token - it was ignored, not saved. Menu input is not hidden, so it\n"
-                "  is visible in this terminal's history: rotate it if it's real. Keys go only at '(hidden)' prompts.")
+            say("  That looks like a key or token - it was ignored, not saved. Paste keys only when the\n"
+                "  wizard asks for them.")
             continue
         say("  Enter a number from the list.")
 
