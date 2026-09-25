@@ -38,13 +38,14 @@ python deploy.py --destroy    # remove it again
 |---|---|
 | 1 | Checks your tools (docker, terraform, aws, az, gcloud, kubectl, git, bash) and which accounts you're signed in to |
 | 2 | Saf3AI API key (typed hidden) + agent id + enforcement. One test scan confirms the key and network |
-| 3 | Cloud → service: local Docker / VM, AWS, Azure, Google Cloud, Hugging Face, any Kubernetes |
+| 3 | Cloud → service: this machine (plain Python, no Docker / Docker / Linux VM service), AWS, Azure, Google Cloud, Hugging Face, any Kubernetes |
 | 4 | Framework → LLM (only valid combinations are offered) → model → LLM key (hidden) |
 | 5 | Target details (region, project, network, names) with defaults |
 | 6 | Review. Nothing happens until you confirm |
 | 7 | Builds and pushes the image, stores keys in the platform's secret store, deploys |
 | 8 | Sends a normal and an injection message: expects 200 and 403 |
 
+- Fastest first test: **This machine → Plain Python** with **LLM = Mock**. It sets up a virtual env, starts the agent on localhost, and runs the two checks. It can also run as a chat in your terminal.
 - Python 3.9+ only, no packages to install. On Windows, run the wizard from Git Bash or PowerShell; it uses Git Bash for the shell scripts.
 - Keys go straight to the platform's secret store. They're never written into the kit or the answers file; the AWS and Kubernetes steps read them from a short-lived owner-only temp file that's deleted right after. Your other answers are saved to `saf3ai-deploy.json` for re-runs and `--destroy`.
 - Azure targets use Terraform, and Terraform keeps the key values in its state file. Keep that file private.
