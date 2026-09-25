@@ -27,10 +27,14 @@ class Provider:
             system=system,
             messages=[{"role": "user", "content": user}],
         )
+        resp = None
         if self.fallbacks:
-            resp = self.client.beta.messages.create(
-                **request, betas=["server-side-fallback-2026-07-01"], fallbacks="default")
-        else:
+            try:
+                resp = self.client.beta.messages.create(
+                    **request, betas=["server-side-fallback-2026-07-01"], fallbacks="default")
+            except TypeError:  # SDK older than 1.8 (e.g. on Python 3.9): no fallbacks parameter
+                self.fallbacks = False
+        if resp is None:
             resp = self.client.messages.create(**request)
         if resp.stop_reason == "refusal":
             return "I can't help with that request."
