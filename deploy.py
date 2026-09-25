@@ -210,6 +210,27 @@ def choose(title, options, default=None):
 # --------------------------------------------------------------------------- running tools
 
 
+def refresh_windows_path():
+    """Pick up tools installed after this terminal was opened (e.g. winget install terraform):
+    add the current User + Machine PATH from the registry to this process and its children."""
+    if not IS_WINDOWS:
+        return
+    import winreg
+    entries = []
+    for root, key in ((winreg.HKEY_CURRENT_USER, r"Environment"),
+                      (winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment")):
+        try:
+            with winreg.OpenKey(root, key) as k:
+                entries += os.path.expandvars(winreg.QueryValueEx(k, "Path")[0]).split(";")
+        except OSError:
+            pass
+    current = os.environ.get("PATH", "").split(";")
+    known = {p.rstrip("\\").lower() for p in current}
+    extra = [p for p in entries if p and p.rstrip("\\").lower() not in known]
+    if extra:
+        os.environ["PATH"] = ";".join(current + extra)
+
+
 def which(name):
     if name == "bash" and IS_WINDOWS:
         for p in (r"C:\Program Files\Git\bin\bash.exe", r"C:\Program Files (x86)\Git\bin\bash.exe"):
@@ -1020,6 +1041,7 @@ def main():
     ap.add_argument("--destroy", action="store_true", help="remove what the saved answers deployed")
     ap.add_argument("--yes", action="store_true", help="auto-approve Terraform plans")
     args = ap.parse_args()
+    refresh_windows_path()
     r = Runner(args.dry_run)
     cfg = args.config or (STATE_FILE if STATE_FILE.exists() else None)
     a = json.loads(cfg.read_text(encoding="utf-8")) if cfg and cfg.exists() else {}
