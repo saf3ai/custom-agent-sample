@@ -522,8 +522,32 @@ def my_ip():
     return f"{body.strip()}/32" if status == 200 else None
 
 
-def ask_target_details(a, ids):
+SIGN_IN = {  # cloud -> (read-only check, login command)
+    "aws": (["aws", "sts", "get-caller-identity", "--query", "Account", "--output", "text"], "aws sso login   (or: aws configure)"),
+    "azure": (["az", "account", "show", "--query", "name", "-o", "tsv"], "az login"),
+    "gcp": (["gcloud", "auth", "print-access-token"], "gcloud auth login"),
+}
+
+
+def ensure_signed_in(a, dry):
+    """Stop before any cloud question if the CLI isn't signed in - discovery (VPCs, subnets,
+    projects) and the deploy itself both need it."""
+    target = a["target"]
+    cloud = {"k8s-eks": "aws", "k8s-aks": "azure", "k8s-gke": "gcp"}.get(target, a["cloud"])
+    if dry or cloud not in SIGN_IN:
+        return
+    check, login = SIGN_IN[cloud]
+    while not quiet(check):
+        say(f"\n  {cloud.upper()} is not signed in (or the login expired). In another terminal run:")
+        say(f"      {login}")
+        if not confirm("Done - check again?", True):
+            raise SystemExit("  Stopped - nothing was changed.")
+    say(f"  {cloud.upper()}: signed in")
+
+
+def ask_target_details(a, ids, dry=False):
     header(5, "Target details")
+    ensure_signed_in(a, dry)
     t = a["target"]
     suffix = pysecrets.token_hex(3)
     if t == "python":
@@ -1058,7 +1082,7 @@ def main():
     saf3ai_key = ask_saf3ai(a, args.dry_run)
     ask_target(a, ids, args.dry_run)
     llm_key = ask_agent(a)
-    ask_target_details(a, ids)
+    ask_target_details(a, ids, args.dry_run)
     hf_token = None
     if a["target"] == "hf-space":
         hf_token = ask_secret("Hugging Face token (write access)", "HF_TOKEN")
