@@ -289,7 +289,9 @@ def ask_saf3ai(a, dry):
     header(2, "Saf3AI")
     say("  Values: Saf3AI console > Integrations > SDK > Custom Agent SDK.")
     key = ask_secret("Saf3AI organization API key", "SAF3AI_API_KEY")
-    a["agent_id"] = ask("Agent id (how it appears in the console)", a.get("agent_id", "sample-support-agent"))
+    # Unique by default so separate deployments don't merge in the console; Enter accepts it
+    a["agent_id"] = ask("Agent id (how it appears in the console; Enter = generated)",
+                        a.get("agent_id") or f"sample-agent-{pysecrets.token_hex(3)}")
     a["environment"] = ask("Environment", a.get("environment", "production"))
     a["enforcement"] = choose("Enforcement", [("block", "block - unsafe prompts get HTTP 403 before the LLM call", None),
                                               ("monitor", "monitor - allow everything, record detections", None)],
