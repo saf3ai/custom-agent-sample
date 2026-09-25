@@ -7,7 +7,8 @@ Pick **one LLM** and **one target** — any combination works with the same imag
 
 | Folder | Contents |
 |---|---|
-| `agent/` | The sample agent (Python, FastAPI) — **start here**. All Saf3AI code is in one file: `saf3ai_setup.py` |
+| `deploy.py` | **Guided deploy**: step-by-step choice of cloud, service, framework and LLM, then build, deploy and verify |
+| `agent/` | The sample agent (Python, FastAPI). All Saf3AI code is in one file: `saf3ai_setup.py` |
 | `agent-variants/` | The same agent built on Google ADK, LangChain, CrewAI, OpenAI Agents SDK |
 | `deploy/` | One folder per target — Terraform / manifests / scripts + README |
 | `docs/` | Provider matrix · target matrix · network & data flow · verify & troubleshoot |
@@ -24,6 +25,29 @@ Pick **one LLM** and **one target** — any combination works with the same imag
 - Your agent calls the LLM **directly** — Saf3AI is not in the model path. See `docs/network-and-data.md`.
 - Policies and guardrails are managed in the Saf3AI console — no redeploy to change them.
 - SDK: `saf3ai-sdk==0.2.4` from PyPI.
+
+## Guided deploy (recommended)
+
+```bash
+python deploy.py              # step-by-step: pick, review, deploy, verify
+python deploy.py --dry-run    # preview every command; nothing is changed
+python deploy.py --destroy    # remove it again
+```
+
+| Step | You choose / it does |
+|---|---|
+| 1 | Checks your tools (docker, terraform, aws, az, gcloud, kubectl, git, bash) and which accounts you're signed in to |
+| 2 | Saf3AI API key (typed hidden) + agent id + enforcement. One test scan confirms the key and network |
+| 3 | Cloud → service: local Docker / VM, AWS, Azure, Google Cloud, Hugging Face, any Kubernetes |
+| 4 | Framework → LLM (only valid combinations are offered) → model → LLM key (hidden) |
+| 5 | Target details (region, project, network, names) with defaults |
+| 6 | Review. Nothing happens until you confirm |
+| 7 | Builds and pushes the image, stores keys in the platform's secret store, deploys |
+| 8 | Sends a normal and an injection message: expects 200 and 403 |
+
+- Python 3.9+ only, no packages to install. On Windows, run the wizard from Git Bash or PowerShell; it uses Git Bash for the shell scripts.
+- Keys go straight to the platform's secret store. They're never written into the kit or the answers file; the AWS and Kubernetes steps read them from a short-lived owner-only temp file that's deleted right after. Your other answers are saved to `saf3ai-deploy.json` for re-runs and `--destroy`.
+- Azure targets use Terraform, and Terraform keeps the key values in its state file. Keep that file private.
 
 ## Quick start (local, 5 minutes)
 

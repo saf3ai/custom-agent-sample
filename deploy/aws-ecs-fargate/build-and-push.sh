@@ -7,7 +7,7 @@ REGION="${AWS_REGION:-us-east-1}"              # = region in terraform.tfvars
 REPO_NAME="${REPO_NAME:-saf3ai-sample-agent}"  # = name in terraform.tfvars
 IMAGE_TAG="${IMAGE_TAG:-latest}"               # = image_tag in terraform.tfvars
 PLATFORM="${PLATFORM:-linux/amd64}"            # X86_64 tasks; linux/arm64 for cpu_architecture = "ARM64"
-AGENT_DIR="$(cd "$(dirname "$0")/../../agent" && pwd)"
+AGENT_DIR="$(cd "${AGENT_DIR:-$(dirname "$0")/../../agent}" && pwd)"  # override: agent-variants/<framework>
 
 REPO_URL="$(aws ecr describe-repositories --region "$REGION" --repository-names "$REPO_NAME" \
   --query 'repositories[0].repositoryUri' --output text)"

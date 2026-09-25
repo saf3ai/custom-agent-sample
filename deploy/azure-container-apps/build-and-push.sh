@@ -7,7 +7,7 @@ ACR_NAME="${ACR_NAME:-}"                         # = acr_name in terraform.tfvar
 IMAGE_NAME="${IMAGE_NAME:-saf3ai-sample-agent}"  # = image_name in terraform.tfvars
 IMAGE_TAG="${IMAGE_TAG:-v1}"                     # = image_tag in terraform.tfvars
 PLATFORM="${PLATFORM:-linux/amd64}"
-AGENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../agent" && pwd)"
+AGENT_DIR="$(cd "${AGENT_DIR:-$(dirname "${BASH_SOURCE[0]}")/../../agent}" && pwd)"  # override: agent-variants/<framework>
 
 command -v az >/dev/null || { echo "ERROR: Azure CLI (az) not found" >&2; exit 1; }
 [[ -n "$ACR_NAME" ]] || { echo "ERROR: set ACR_NAME" >&2; exit 1; }

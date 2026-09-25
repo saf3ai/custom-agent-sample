@@ -9,7 +9,7 @@ REPO_NAME="${REPO_NAME:-saf3ai-sample-agent}"  # = name in terraform.tfvars
 IMAGE_TAG="${IMAGE_TAG:-latest}"               # = image_tag in terraform.tfvars
 PLATFORM="${PLATFORM:-linux/amd64}"            # linux/arm64 for architecture = "arm64"
 HERE="$(cd "$(dirname "$0")" && pwd)"
-AGENT_DIR="$(cd "$HERE/../../agent" && pwd)"
+AGENT_DIR="$(cd "${AGENT_DIR:-$HERE/../../agent}" && pwd)"  # override: agent-variants/<framework>
 AGENT_IMAGE="saf3ai-sample-agent:$IMAGE_TAG"
 
 REPO_URL="$(aws ecr describe-repositories --region "$REGION" --repository-names "$REPO_NAME" \

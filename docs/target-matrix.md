@@ -2,6 +2,8 @@
 
 Every target runs the same container (`agent/Dockerfile`) and the same env vars. Pick by how you run services today.
 
+- **Easiest:** `python deploy.py` asks which target, then runs that folder's steps for you. `--dry-run` shows the commands first.
+
 | Target | Folder | Tooling | Secrets from | Model identity (no key) | Scale to zero |
 |---|---|---|---|---|---|
 | Local / any Docker host | root `docker-compose.yml` | Docker Compose | `.env` file | — | — |

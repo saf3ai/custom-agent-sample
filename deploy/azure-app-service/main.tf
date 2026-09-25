@@ -16,7 +16,7 @@ locals {
     huggingface         = "HF_TOKEN"
     "openai-compatible" = "OPENAI_API_KEY"
   }
-  llm_key_env = lookup(local.provider_key_env, var.llm_provider, "")
+  llm_key_env = var.llm_key_env != "" ? var.llm_key_env : lookup(local.provider_key_env, var.llm_provider, "")
   llm_key_set = nonsensitive(var.llm_api_key != "")
 
   # env var name => Key Vault secret name (names only, no values)

@@ -45,7 +45,7 @@ EXTRA_ENV_VARS="${EXTRA_ENV_VARS:-}"   # more KEY=VALUE pairs, '|'-separated, e.
 # =========================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-AGENT_DIR="$SCRIPT_DIR/../../agent"
+AGENT_DIR="${AGENT_DIR:-$SCRIPT_DIR/../../agent}"  # override: agent-variants/<framework>
 LABELS="app=saf3ai-sample-agent"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
 SA_EMAIL="${RUNTIME_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -67,7 +67,9 @@ command -v gcloud >/dev/null || die "gcloud CLI not found"
 [[ -n "${SAF3AI_API_KEY:-}" ]] || die "export SAF3AI_API_KEY (Saf3AI console > Integrations > SDK > Custom Agent SDK)"
 [[ -f "$AGENT_DIR/Dockerfile" ]] || die "agent/Dockerfile not found at $AGENT_DIR"
 
-# Env var the chosen provider reads its key from (blank = no key)
+# Env var the chosen provider reads its key from (blank = no key).
+# Set LLM_KEY_ENV yourself for agent-variants (e.g. GOOGLE_API_KEY for google-adk).
+if [[ -z "${LLM_KEY_ENV:-}" ]]; then
 case "$LLM_PROVIDER" in
   gemini) LLM_KEY_ENV=GEMINI_API_KEY ;;
   anthropic) LLM_KEY_ENV=ANTHROPIC_API_KEY ;;
@@ -78,6 +80,7 @@ case "$LLM_PROVIDER" in
   bedrock) die "bedrock needs AWS credentials - use an AWS target" ;;
   *) die "unknown LLM_PROVIDER '$LLM_PROVIDER'" ;;
 esac
+fi
 if [[ -n "$LLM_KEY_ENV" && -z "${LLM_API_KEY:-}" ]]; then
   # openai-compatible servers may not need a key
   [[ "$LLM_PROVIDER" == "openai-compatible" ]] || die "export LLM_API_KEY (passed to the agent as $LLM_KEY_ENV)"

@@ -173,7 +173,7 @@ variable "llm_provider" {
   default     = "mock"
 
   validation {
-    condition     = contains(["mock", "gemini", "anthropic", "openai", "azure-openai", "huggingface", "openai-compatible"], var.llm_provider)
+    condition     = contains(["mock", "gemini", "google-genai", "anthropic", "openai", "azure-openai", "huggingface", "openai-compatible"], var.llm_provider)
     error_message = "Unsupported llm_provider on Azure (vertex needs Google credentials, bedrock needs AWS credentials)."
   }
 }
@@ -195,4 +195,10 @@ variable "extra_env" {
   description = "Extra non-secret env vars, e.g. { AZURE_OPENAI_ENDPOINT = \"https://<RESOURCE>.openai.azure.com\", AZURE_OPENAI_API_VERSION = \"2024-10-21\" }."
   type        = map(string)
   default     = {}
+}
+
+variable "llm_key_env" {
+  description = "Env var the agent reads the LLM key from. Blank = derived from llm_provider. Set it for agent-variants, e.g. GOOGLE_API_KEY."
+  type        = string
+  default     = ""
 }

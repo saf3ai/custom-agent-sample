@@ -149,7 +149,7 @@ variable "llm_provider" {
   default     = "mock"
 
   validation {
-    condition     = contains(["mock", "gemini", "vertex", "anthropic", "openai", "azure-openai", "huggingface", "openai-compatible"], var.llm_provider)
+    condition     = contains(["mock", "gemini", "google-genai", "vertex", "anthropic", "openai", "azure-openai", "huggingface", "openai-compatible"], var.llm_provider)
     error_message = "Unsupported llm_provider for Cloud Run (bedrock needs AWS credentials - use an AWS target)."
   }
 }
@@ -177,4 +177,10 @@ variable "extra_env" {
   description = "Extra non-secret env vars, e.g. { OPENAI_BASE_URL = \"https://llm.example.com/v1\", SAF3AI_BLOCK_RESPONSES = \"true\" }."
   type        = map(string)
   default     = {}
+}
+
+variable "llm_key_env" {
+  description = "Env var the agent reads the LLM key from. Blank = derived from llm_provider. Set it for agent-variants, e.g. GOOGLE_API_KEY."
+  type        = string
+  default     = ""
 }

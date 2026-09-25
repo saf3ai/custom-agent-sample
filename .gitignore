@@ -14,3 +14,8 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# deploy.py wizard (answers without keys, generated tfvars) and HF staging
+saf3ai-deploy.json
+*.auto.tfvars.json
+deploy/hugging-face-spaces/build/

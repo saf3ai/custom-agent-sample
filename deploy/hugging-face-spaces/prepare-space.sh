@@ -10,7 +10,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-AGENT_DIR="$(cd "$HERE/../../agent" && pwd)"
+AGENT_DIR="$(cd "${AGENT_DIR:-$HERE/../../agent}" && pwd)"  # override: agent-variants/<framework>
 DEFAULT_OUT="$HERE/build/space"
 OUT="${1:-$DEFAULT_OUT}"
 
