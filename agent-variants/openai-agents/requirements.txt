@@ -1,0 +1,14 @@
+# Saf3AI SDK (PyPI)
+saf3ai-sdk==0.2.4
+
+# Agent framework (brings the openai client). Pre-1.0, so pinned to the tested
+# minor version (0.22.3); move it forward deliberately.
+openai-agents>=0.22,<0.23
+
+# HTTP service
+fastapi>=0.110
+uvicorn>=0.29
+python-dotenv>=1.0
+
+# Do NOT add google-adk, crewai or langchain-core: the Saf3AI SDK picks its
+# integration from the installed packages, and this agent must run as "custom".

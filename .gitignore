@@ -1,0 +1,21 @@
+# Local secrets - never commit
+.env
+secret.env
+secret.json
+*.tfvars
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# deploy.py wizard (answers without keys, generated tfvars) and HF staging
+saf3ai-deploy.json
+*.auto.tfvars.json
+deploy/hugging-face-spaces/build/

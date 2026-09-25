@@ -1,0 +1,19 @@
+# Saf3AI SDK (PyPI)
+saf3ai-sdk==0.2.4
+
+# HTTP service
+fastapi>=0.110
+uvicorn>=0.29
+python-dotenv>=1.0
+
+# LLM clients - all included so one image serves every LLM_PROVIDER.
+# Trim to the one you use for a smaller image.
+google-genai>=1.0      # gemini, vertex
+anthropic>=1.8; python_version >= "3.10"   # anthropic (refusal fallbacks need 1.8+)
+anthropic>=0.40; python_version < "3.10"   # Python 3.9 hosts: 1.x needs 3.10+
+openai>=1.40           # openai, azure-openai, huggingface, openai-compatible
+boto3>=1.34            # bedrock
+
+# Do NOT add google-adk, crewai or langchain-core to this image: the Saf3AI SDK
+# picks its integration from the installed packages. Framework agents live in
+# agent-variants/.

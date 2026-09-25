@@ -1,0 +1,31 @@
+# Copy to terraform.tfvars and replace the <placeholders>.
+# Keys and tokens do NOT go here - they go in the Secrets Manager secret (README, Deploy step 3).
+
+region = "us-east-1"
+name   = "saf3ai-sample-agent"
+
+architecture           = "x86_64" # arm64 needs PLATFORM=linux/arm64 in build-and-push.sh
+memory_size            = 1024
+timeout                = 60
+function_url_auth_type = "AWS_IAM" # NONE = public URL; anyone with it can call the agent
+
+agent_env = {
+  SAF3AI_COLLECTOR_AGENT  = "https://analyzer.saf3ai.com/v1/traces"
+  SAF3AI_SCANNER_ENDPOINT = "https://scanner.saf3ai.com"
+  SAF3AI_AGENT_ID         = "sample-support-agent"
+  SAF3AI_SERVICE_NAME     = "sample-support-agent"
+  SAF3AI_ENVIRONMENT      = "production"
+  SAF3AI_ENFORCEMENT      = "block" # block | monitor
+  SAF3AI_FAIL_MODE        = "open"  # open | closed
+  LLM_PROVIDER            = "mock"  # see ../../docs/provider-matrix.md
+  # LLM_MODEL             = "<model-or-deployment-id>"
+  # Do not add AWS_REGION: Lambda sets it.
+}
+
+# LLM_PROVIDER = "bedrock": no key needed - the function role calls Bedrock.
+enable_bedrock = false
+# bedrock_model_arns = ["arn:aws:bedrock:us-east-1::foundation-model/<model-id>"]
+
+tags = {
+  # owner = "<team>"
+}
