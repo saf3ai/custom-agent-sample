@@ -11,14 +11,12 @@ import os
 
 import boto3
 
-from providers import required
-
 
 class Provider:
     name = "bedrock"
 
     def __init__(self):
-        self.model = required("LLM_MODEL")
+        self.model = os.getenv("LLM_MODEL") or "amazon.nova-lite-v1:0"
         self.client = boto3.client("bedrock-runtime",
                                    region_name=os.getenv("AWS_REGION", "us-east-1"))
 

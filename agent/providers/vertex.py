@@ -13,7 +13,7 @@ class Provider:
     name = "vertex"
 
     def __init__(self):
-        self.model = required("LLM_MODEL")
+        self.model = os.getenv("LLM_MODEL") or "gemini-2.5-flash"
         self.client = genai.Client(
             vertexai=True,
             project=required("GOOGLE_CLOUD_PROJECT"),

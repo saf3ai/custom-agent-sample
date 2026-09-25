@@ -13,7 +13,6 @@ through environment variables or stdin, and never saved. Answers without keys
 are saved to saf3ai-deploy.json for re-runs and --destroy.
 """
 import argparse
-import getpass
 import json
 import os
 import platform
@@ -60,36 +59,41 @@ PROVIDERS = {
     "gemini": dict(label="Gemini API (Google AI Studio key)", name="gemini",
                    key="GEMINI_API_KEY", model="gemini-flash-latest"),
     "vertex": dict(label="Gemini on Vertex AI (service account, no key)", name="vertex",
-                   key=None, model=None, identity="gcp", hint="a Gemini model enabled in your project"),
+                   key=None, model="gemini-2.5-flash", identity="gcp", hint="The model must be available to your project and region (Vertex AI > Model Garden)."),
     "anthropic": dict(label="Claude (Anthropic API key)", name="anthropic",
                       key="ANTHROPIC_API_KEY", model="claude-opus-5"),
-    "openai": dict(label="OpenAI (API key)", name="openai", key="OPENAI_API_KEY", model=None),
+    "openai": dict(label="OpenAI (API key)", name="openai", key="OPENAI_API_KEY", model="gpt-4.1-mini"),
     "azure-openai": dict(label="Azure OpenAI (endpoint + key)", name="azure-openai",
-                         key="AZURE_OPENAI_API_KEY", model=None, hint="your deployment name",
+                         key="AZURE_OPENAI_API_KEY", model=None,
+                         hint="your Azure deployment name (you chose it when you deployed the model)",
                          extra=[("AZURE_OPENAI_ENDPOINT", "Azure OpenAI endpoint (https://<resource>.openai.azure.com)", None),
                                 ("AZURE_OPENAI_API_VERSION", "API version", "2024-10-21")]),
     "bedrock": dict(label="Amazon Bedrock (IAM role, no key)", name="bedrock", key=None,
-                    model=None, identity="aws", hint="model or inference-profile id from the Bedrock console"),
+                    model="amazon.nova-lite-v1:0", identity="aws",
+                    hint="Enable the model in the Bedrock console. Some regions need the inference-profile "
+                         "id, e.g. us.amazon.nova-lite-v1:0."),
     "huggingface": dict(label="Hugging Face Inference Providers (HF token)", name="huggingface",
-                        key="HF_TOKEN", model=None, hint="a Hub model id"),
+                        key="HF_TOKEN", model="openai/gpt-oss-20b",
+                        hint="Other models: meta-llama/Llama-3.1-8B-Instruct, Qwen/Qwen3-8B "
+                             "(full list: https://router.huggingface.co/v1/models)"),
     "openai-compatible": dict(label="OpenAI-compatible endpoint (vLLM, Ollama, Groq, ...)",
                               name="openai-compatible", key="OPENAI_API_KEY", key_optional=True, model=None,
+                              hint="the model name your server serves (e.g. llama3.1 on Ollama)",
                               extra=[("OPENAI_BASE_URL", "Base URL (e.g. http://vllm:8000/v1)", None)]),
     "mock": dict(label="Mock - no LLM, proves the Saf3AI wiring", name="mock", key=None, model="mock-echo"),
     "adk-gemini": dict(label="Gemini API (Google AI Studio key)", name="gemini",
                        key="GOOGLE_API_KEY", model="gemini-flash-latest"),
     "adk-vertex": dict(label="Gemini on Vertex AI (service account, no key)", name="vertex", key=None,
-                       model=None, identity="gcp", hint="a Gemini model available on Vertex AI",
+                       model="gemini-2.5-flash", identity="gcp", hint="The model must be available to your project and region (Vertex AI > Model Garden).",
                        env={"GOOGLE_GENAI_USE_VERTEXAI": "true"}),
     "lc-gemini": dict(label="Gemini API (Google AI Studio key)", name="google-genai",
                       key="GOOGLE_API_KEY", model="gemini-flash-latest"),
-    "lc-openai": dict(label="OpenAI (API key)", name="openai", key="OPENAI_API_KEY", model=None),
+    "lc-openai": dict(label="OpenAI (API key)", name="openai", key="OPENAI_API_KEY", model="gpt-4.1-mini"),
     "lc-anthropic": dict(label="Claude (Anthropic API key)", name="anthropic",
                          key="ANTHROPIC_API_KEY", model="claude-opus-5"),
-    "crew-openai": dict(label="OpenAI (API key)", name="", key="OPENAI_API_KEY", model="",
-                        hint="CrewAI model string, e.g. openai/<model>; blank = CrewAI default"),
-    "oa-openai": dict(label="OpenAI (API key)", name="", key="OPENAI_API_KEY", model="",
-                      hint="blank = Agents SDK default"),
+    "crew-openai": dict(label="OpenAI (API key)", name="", key="OPENAI_API_KEY", model="openai/gpt-4.1-mini",
+                        hint="CrewAI format: openai/<model>."),
+    "oa-openai": dict(label="OpenAI (API key)", name="", key="OPENAI_API_KEY", model="gpt-4.1-mini"),
 }
 
 CLOUDS = [
@@ -144,7 +148,7 @@ def clean(value, secret=False):
 
 
 def ask(prompt, default=None, required=True):
-    suffix = f" [{default}]" if default not in (None, "") else ""
+    suffix = f" [{default}] (Enter to accept)" if default not in (None, "") else ""
     while True:
         value = clean(input(f"  {prompt}{suffix}: "))
         if not value and default is not None:
@@ -154,19 +158,83 @@ def ask(prompt, default=None, required=True):
         say("  (required)")
 
 
+def masked_input(prompt):
+    """Read a secret showing one * per character, so a paste is visible but the key is not."""
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    if not sys.stdin.isatty():  # piped input, or a terminal without a real console (e.g. Git Bash)
+        return sys.stdin.readline().rstrip("\r\n")
+    chars = []
+
+    def backspace():
+        if chars:
+            chars.pop()
+            sys.stdout.write("\b \b")
+
+    if IS_WINDOWS:
+        import msvcrt
+        while True:
+            ch = msvcrt.getwch()
+            if ch in ("\r", "\n"):
+                break
+            if ch == "\x03":
+                raise KeyboardInterrupt
+            if ch in ("\x00", "\xe0"):  # arrow / function keys send a second code
+                msvcrt.getwch()
+            elif ch == "\x08":
+                backspace()
+            elif ch.isprintable():      # control chars such as ^V from Ctrl+V are dropped
+                chars.append(ch)
+                sys.stdout.write("*")
+            sys.stdout.flush()
+    else:
+        import termios
+        import tty
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            while True:
+                ch = sys.stdin.read(1)
+                if ch in ("\r", "\n", ""):
+                    break
+                if ch == "\x03":
+                    raise KeyboardInterrupt
+                if ch in ("\x7f", "\x08"):
+                    backspace()
+                elif ch.isprintable():
+                    chars.append(ch)
+                    sys.stdout.write("*")
+                sys.stdout.flush()
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+    sys.stdout.write("\n")
+    sys.stdout.flush()
+    return "".join(chars)
+
+
+def show_received(value):
+    if value:
+        tail = f", ends ...{value[-4:]}" if len(value) >= 12 else ""
+        say(f"  received {len(value)} characters{tail}")
+
+
 def ask_secret(prompt, env_var=None, required=True):
     if env_var and os.getenv(env_var):
         if confirm(f"Use {env_var} from your environment?", True):
-            return clean(os.environ[env_var], secret=True)
+            value = clean(os.environ[env_var], secret=True)
+            show_received(value)
+            return value
     while True:
-        value = clean(getpass.getpass(f"  {prompt} (hidden, paste with right-click): "), secret=True)
+        value = clean(masked_input(f"  {prompt} (paste, then Enter): "), secret=True)
+        show_received(value)
         if value or not required:
             return value
         say("  (required)")
 
 
 def confirm(prompt, default=False):
-    hint = "Y/n" if default else "y/N"
+    hint = "Y/n, Enter = yes" if default else "y/N, Enter = no"
     value = input(f"  {prompt} [{hint}]: ").strip().lower()
     return default if not value else value in ("y", "yes")
 
@@ -294,11 +362,17 @@ def preflight():
     if which("az"):
         ids["azure"] = quiet(["az", "account", "show", "--query", "name", "-o", "tsv"])
     if which("gcloud"):
-        ids["gcp"] = quiet(["gcloud", "config", "get-value", "project"])
+        # A set project isn't enough - check the login can still mint a token (never printed)
+        if quiet(["gcloud", "auth", "print-access-token"]):
+            ids["gcp"] = quiet(["gcloud", "config", "get-value", "project"]) or "(no project set)"
+        else:
+            ids["gcp"] = None
     if which("kubectl"):
         ids["k8s"] = quiet(["kubectl", "config", "current-context"])
+    login = {"aws": "aws sso login", "azure": "az login", "gcp": "gcloud auth login",
+             "k8s": "kubectl config use-context <name>"}
     for k, v in ids.items():
-        say(f"  {k:<10} {'signed in: ' + v if v else 'not signed in'}")
+        say(f"  {k:<10} {'signed in: ' + v if v else 'not signed in (' + login[k] + ')'}")
     return ids
 
 
@@ -381,17 +455,24 @@ def ask_agent(a):
         if a["target"] == "gcp-agent-engine" and p != "adk-vertex":
             why = "Agent Engine uses Vertex AI"
         opts.append((p, spec["label"], why))
-    a["provider"] = choose("LLM", opts, a.get("provider"))
+    previous = a.get("provider")
+    a["provider"] = choose("LLM", opts, previous)
+    same = a.get("model_provider") == a["provider"]  # saved values belong to this provider?
+    saved_model = a.get("model") if same else None
+    saved_extra = (a.get("extra") or {}) if same else {}
     spec = PROVIDERS[a["provider"]]
-    if spec["model"] is None:
-        a["model"] = ask(f"Model ({spec.get('hint', 'model id')})", a.get("model"))
-    elif spec["model"] == "":
-        a["model"] = ask(f"Model ({spec.get('hint')})", a.get("model", ""), required=False)
+    if a["provider"] == "mock":
+        a["model"] = spec["model"]
+    elif spec["model"] is None:  # no sensible default exists (e.g. your Azure deployment name)
+        a["model"] = ask(f"Model - {spec['hint']}", saved_model)
     else:
-        a["model"] = spec["model"] if a["provider"] == "mock" else ask("Model", a.get("model", spec["model"]))
+        if spec.get("hint"):
+            say(f"  {spec['hint']}")
+        a["model"] = ask("Model", saved_model or spec["model"])
+    a["model_provider"] = a["provider"]
     a["extra"] = {}
     for var, question, dflt in spec.get("extra", []):
-        a["extra"][var] = ask(question, a.get("extra", {}).get(var, dflt))
+        a["extra"][var] = ask(question, saved_extra.get(var, dflt))
     llm_key = ""
     if spec["key"]:
         if a["target"] == "hf-space" and spec["key"] == "HF_TOKEN":
