@@ -545,9 +545,26 @@ def ensure_signed_in(a, dry):
     say(f"  {cloud.upper()}: signed in")
 
 
+def ensure_docker_engine(a, dry):
+    """The docker CLI can be installed while its engine is stopped (Docker Desktop not started,
+    or waiting for a reboot after an update) - check before building anything."""
+    if dry or "docker" not in TOOLS.get(a["target"], []):
+        return
+    while True:
+        version = quiet(["docker", "version", "--format", "{{.Server.Version}}"])
+        if version and version[0].isdigit():
+            say(f"  Docker engine: running ({version})")
+            return
+        say("\n  The Docker engine is not running. Start Docker Desktop and wait for 'Engine running'.")
+        say("  (Right after a Docker Desktop update, Windows may need a restart first.)")
+        if not confirm("Done - check again?", True):
+            raise SystemExit("  Stopped - nothing was changed.")
+
+
 def ask_target_details(a, ids, dry=False):
     header(5, "Target details")
     ensure_signed_in(a, dry)
+    ensure_docker_engine(a, dry)
     t = a["target"]
     suffix = pysecrets.token_hex(3)
     if t == "python":
