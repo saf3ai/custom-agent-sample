@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: saf3ai-agent
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+  - networkpolicy.yaml
+  - pdb.yaml
+
+# Non-secret settings. Overlays merge their LLM settings into this ConfigMap.
+configMapGenerator:
+  - name: saf3ai-agent-config
+    envs:
+      - config.env
+
+# Secrets. Create secret.env first: cp secret.example.env secret.env
+# secret.env is gitignored - never commit it.
+secretGenerator:
+  - name: saf3ai-agent-secrets
+    envs:
+      - secret.env

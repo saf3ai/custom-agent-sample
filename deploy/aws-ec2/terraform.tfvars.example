@@ -1,0 +1,32 @@
+# Copy to terraform.tfvars and replace the <placeholders>.
+# Keys and tokens do NOT go here - they go in the Secrets Manager secret (README, Deploy step 3).
+
+region = "us-east-1"
+name   = "saf3ai-sample-agent"
+
+vpc_id              = "vpc-<id>"
+subnet_id           = "subnet-<id>"      # outbound HTTPS via NAT, or public subnet + associate_public_ip
+associate_public_ip = false
+allowed_cidr_blocks = ["<caller-cidr>"] # who may call the agent, e.g. your VPC or office range
+service_port        = 8080
+instance_type       = "t3.small"
+
+agent_env = {
+  SAF3AI_COLLECTOR_AGENT  = "https://analyzer.saf3ai.com/v1/traces"
+  SAF3AI_SCANNER_ENDPOINT = "https://scanner.saf3ai.com"
+  SAF3AI_AGENT_ID         = "sample-support-agent"
+  SAF3AI_SERVICE_NAME     = "sample-support-agent"
+  SAF3AI_ENVIRONMENT      = "production"
+  SAF3AI_ENFORCEMENT      = "block" # block | monitor
+  SAF3AI_FAIL_MODE        = "open"  # open | closed
+  LLM_PROVIDER            = "mock"  # see ../../docs/provider-matrix.md
+  # LLM_MODEL             = "<model-or-deployment-id>"
+}
+
+# LLM_PROVIDER = "bedrock": no key needed - the instance role calls Bedrock.
+enable_bedrock = false
+# bedrock_model_arns = ["arn:aws:bedrock:us-east-1::foundation-model/<model-id>"]
+
+tags = {
+  # owner = "<team>"
+}

@@ -1,0 +1,6 @@
+# Installed locally to run deploy.py, and in the Agent Engine runtime (deploy.py
+# passes this list as the runtime's requirements).
+saf3ai-sdk==0.2.4
+google-adk>=2.9,<3
+google-cloud-aiplatform[agent_engines,adk]>=1.112,<3
+python-dotenv>=1.0

@@ -1,0 +1,39 @@
+# Copy to terraform.tfvars and edit. Keep secrets out of this file:
+#   export TF_VAR_saf3ai_api_key='<SAF3AI_API_KEY>'
+#   export TF_VAR_llm_api_key='<LLM_API_KEY>'      # only if llm_provider needs a key
+
+location            = "eastus"
+resource_group_name = "rg-saf3ai-sample-agent-web"
+plan_name           = "asp-saf3ai-sample-agent"
+plan_sku            = "B1"
+app_name            = "<UNIQUE_APP_NAME>" # becomes <UNIQUE_APP_NAME>.azurewebsites.net
+
+# Registry: a new ACR (globally unique, 5-50 letters/digits) ...
+create_acr = true
+acr_name   = "<UNIQUE_ACR_NAME>"
+# ... or an existing ACR that already holds the image:
+# create_acr              = false
+# acr_resource_group_name = "<ACR_RESOURCE_GROUP>"
+
+image_name = "saf3ai-sample-agent"
+image_tag  = "v1" # must match the tag you built
+
+key_vault_name = "<UNIQUE_KEY_VAULT_NAME>" # 3-24 chars, globally unique
+
+allowed_ip_ranges = [] # e.g. ["203.0.113.0/24"]; empty = any caller
+
+saf3ai_agent_id    = "sample-support-agent"
+saf3ai_environment = "production"
+saf3ai_enforcement = "block" # block | monitor
+saf3ai_fail_mode   = "open"  # open | closed
+
+# mock proves the wiring with no model cost. Then e.g. "azure-openai" + TF_VAR_llm_api_key:
+llm_provider = "mock"
+llm_model    = "" # azure-openai: your deployment name
+
+# extra_env = {
+#   AZURE_OPENAI_ENDPOINT    = "https://<RESOURCE>.openai.azure.com"
+#   AZURE_OPENAI_API_VERSION = "2024-10-21"
+# }
+
+tags = {}

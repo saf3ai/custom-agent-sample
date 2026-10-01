@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: saf3ai-agent
+  labels:
+    # The agent pod meets the "restricted" Pod Security Standard
+    pod-security.kubernetes.io/enforce: restricted

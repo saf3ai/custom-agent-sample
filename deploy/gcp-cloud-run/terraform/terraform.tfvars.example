@@ -1,0 +1,34 @@
+# Copy to terraform.tfvars and edit. Keep secrets out of this file:
+#   export TF_VAR_saf3ai_api_key='<SAF3AI_API_KEY>'
+#   export TF_VAR_llm_api_key='<LLM_API_KEY>'      # only if llm_provider needs a key
+
+project_id = "<PROJECT_ID>"
+region     = "us-central1"
+
+service_name     = "saf3ai-sample-agent"
+artifact_repo_id = "saf3ai-agents"
+image_tag        = "v1" # must match the tag you built
+
+min_instances = 0 # 0 = scale to zero, 1 = always warm
+max_instances = 5
+
+# Who may call the service (private by default). ["allUsers"] = public.
+invoker_members = ["user:<YOUR_EMAIL>"]
+
+saf3ai_agent_id    = "sample-support-agent"
+saf3ai_environment = "production"
+saf3ai_enforcement = "block" # block | monitor
+saf3ai_fail_mode   = "open"  # open | closed
+
+# mock proves the wiring with no model cost. Then e.g.:
+#   llm_provider = "gemini"   (+ TF_VAR_llm_api_key)
+#   llm_provider = "vertex"   llm_model = "<GEMINI_MODEL_ID>"   (runtime service account, no key)
+llm_provider = "mock"
+llm_model    = ""
+
+# extra_env = {
+#   AZURE_OPENAI_ENDPOINT    = "https://<RESOURCE>.openai.azure.com"
+#   AZURE_OPENAI_API_VERSION = "2024-10-21"
+# }
+
+labels = {}
