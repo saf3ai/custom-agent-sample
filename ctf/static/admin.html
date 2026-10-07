@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saf3AI CTF - organiser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --frame: #1A222F; --card: #1f2a3d; --border: #3d3d5c; --text: #E1E1E1; --muted: #AAB3BB;
+    --accent: #7B68EE; --blue: #589bff; --teal: #46D9C5; --danger: #FF6B8E; --good: #34d399;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--frame); color: var(--text);
+         font: 15px/1.5 Manrope, "Segoe UI", system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 16px; padding: 12px 20px;
+           border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .brand { font-weight: 700; font-size: 17px; }
+  .brand span { color: var(--accent); }
+  #status { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+  main { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; padding: 16px 20px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+          overflow-x: auto; }
+  .wide { grid-column: 1 / -1; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+       margin: 0 0 10px; font-weight: 600; }
+  button { font: inherit; font-weight: 600; color: #fff; background: var(--accent); border: 0;
+           border-radius: 8px; padding: 9px 16px; cursor: pointer; }
+  button.quiet { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  button.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  input { font: inherit; color: var(--text); background: var(--frame); border: 1px solid var(--border);
+          border-radius: 8px; padding: 9px 12px; }
+  input:focus, button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase;
+       letter-spacing: .04em; }
+  th, td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  code { color: var(--teal); font-size: 14px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .msg { color: var(--danger); font-size: 14px; }
+  .prompt { white-space: pre-wrap; overflow-wrap: anywhere; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Saf3<span>AI</span> CTF &middot; organiser</div>
+  <div id="status"></div>
+</header>
+
+<main>
+  <div class="card wide" id="signin">
+    <h2>Admin token</h2>
+    <form class="row" id="tokenForm">
+      <input id="token" type="password" placeholder="CTF_ADMIN_TOKEN" autocomplete="off" size="36">
+      <button type="submit">Open</button>
+      <span class="msg" id="tokenMsg"></span>
+    </form>
+  </div>
+
+  <div class="card" id="controls" hidden>
+    <h2>Event</h2>
+    <div class="row">
+      <input id="minutes" type="number" min="1" max="600" value="60" style="width:90px">
+      <button id="start">Start</button>
+      <button id="stop" class="quiet">Stop now</button>
+      <button id="reset" class="danger">Reset</button>
+    </div>
+    <p class="muted">Start begins, or restarts, the clock for the stated number of minutes. Reset removes every team, attempt and score.</p>
+    <p class="muted" id="where"></p>
+  </div>
+
+  <div class="card" id="flagsCard" hidden>
+    <h2>Answer key</h2>
+    <table><thead><tr><th>Level</th><th>Flag</th><th class="num">Pts</th></tr></thead><tbody id="flags"></tbody></table>
+  </div>
+
+  <div class="card" id="boardCard" hidden>
+    <h2>Scoreboard</h2>
+    <table><thead><tr><th>#</th><th>Team</th><th class="num">Solved</th><th class="num">Pts</th></tr></thead>
+      <tbody id="board"></tbody></table>
+  </div>
+
+  <div class="card wide" id="levelsCard" hidden>
+    <h2>Attempts by level</h2>
+    <table><thead><tr><th>Level</th><th class="num">Allowed</th><th class="num">Detected</th>
+      <th class="num">Blocked</th><th class="num">Code disclosed</th><th class="num">Errors</th><th class="num">Solves</th></tr></thead>
+      <tbody id="levels"></tbody></table>
+    <p class="muted">Detected: Saf3AI flagged the prompt in monitor mode. Blocked: stopped by Saf3AI or by the output check.</p>
+  </div>
+
+  <div class="card wide" id="promptsCard" hidden>
+    <h2>Successful prompts</h2>
+    <table><thead><tr><th>Level</th><th>Team</th><th>Prompt</th></tr></thead><tbody id="prompts"></tbody></table>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let token = sessionStorage.getItem("ctf_admin_token") || "";
+
+async function api(path, body) {
+  const options = { headers: { "X-Admin-Token": token } };
+  if (body) {
+    options.method = "POST";
+    options.headers["Content-Type"] = "application/json";
+    options.body = JSON.stringify(body);
+  }
+  try {
+    const response = await fetch(path, options);
+    return { status: response.status, data: await response.json().catch(() => ({})) };
+  } catch (error) {
+    return { status: 0, data: {} };
+  }
+}
+
+function row(cells) {
+  const tr = document.createElement("tr");
+  for (const [text, className, tag] of cells) {
+    const td = document.createElement("td");
+    if (className) td.className = className;
+    if (tag) { const inner = document.createElement(tag); inner.textContent = text; td.append(inner); }
+    else td.textContent = text;
+    tr.append(td);
+  }
+  return tr;
+}
+
+function show(signedIn) {
+  $("signin").hidden = signedIn;
+  for (const id of ["controls", "flagsCard", "boardCard", "levelsCard", "promptsCard"]) $(id).hidden = !signedIn;
+}
+
+async function loadFlags() {
+  const result = await api("/api/admin/flags");
+  if (result.status !== 200) return false;
+  $("flags").replaceChildren(...result.data.flags.map(item =>
+    row([[item.level + " · " + item.title], [item.flag, "", "code"], [item.points, "num"]])));
+  return true;
+}
+
+async function refresh() {
+  if (!token) return;
+  const result = await api("/api/admin/report");
+  if (result.status !== 200) return;
+  const data = result.data, event = data.event;
+  $("status").textContent = event.status === "running"
+    ? "Running · " + Math.floor(event.seconds_left / 60) + " min " + (event.seconds_left % 60) + " s left · " + data.teams + " teams"
+    : (event.status === "waiting" ? "Not started" : "Ended") + " · " + data.teams + " teams";
+  $("where").textContent = "Saf3AI console: Custom Agents > Monitoring > Log Tracer, agent '" + data.agent_id +
+    "'. Model: " + data.model + ".";
+  $("board").replaceChildren(...data.scoreboard.map(item =>
+    row([[item.rank], [item.team], [item.solved, "num"], [item.points, "num"]])));
+  $("levels").replaceChildren(...[1, 2, 3, 4, 5].map(id => {
+    const n = data.levels[id] || {};
+    return row([[id], [n.allowed || 0, "num"], [n.flagged || 0, "num"], [n.blocked || 0, "num"],
+                [n.leaked || 0, "num"], [n.error || 0, "num"], [n.solves || 0, "num"]]);
+  }));
+  $("prompts").replaceChildren(...data.winning_prompts.map(item =>
+    row([[item.level], [item.name], [item.prompt, "prompt"]])));
+}
+
+$("tokenForm").onsubmit = async event => {
+  event.preventDefault();
+  token = $("token").value.trim();
+  if (await loadFlags()) {
+    sessionStorage.setItem("ctf_admin_token", token);
+    $("tokenMsg").textContent = "";
+    show(true);
+    refresh();
+  } else {
+    token = "";
+    $("tokenMsg").textContent = "The token was not accepted.";
+  }
+};
+
+$("start").onclick = async () => { await api("/api/admin/start", { minutes: Number($("minutes").value) || 60 }); refresh(); };
+$("stop").onclick = async () => { await api("/api/admin/stop", {}); refresh(); };
+$("reset").onclick = async () => {
+  if (!confirm("Remove every team, attempt and score?")) return;
+  await api("/api/admin/reset", {});
+  refresh();
+};
+
+setInterval(refresh, 5000);
+if (token) loadFlags().then(ok => { show(ok); if (ok) refresh(); else token = ""; });
+</script>
+</body>
+</html>
