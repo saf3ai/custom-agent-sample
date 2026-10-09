@@ -1,0 +1,77 @@
+#!/bin/bash
+# Saf3AI sample agent - EC2 bootstrap for Amazon Linux 2023 (rendered by Terraform).
+# Installs Docker, writes the settings below, then runs saf3ai-agent-deploy, which
+# loads the secret from Secrets Manager and starts the container.
+# Log: /var/log/cloud-init-output.log
+set -euo pipefail
+
+dnf install -y docker jq
+systemctl enable --now docker
+
+install -d -m 700 /etc/saf3ai
+
+# Non-secret settings (agent_env in terraform.tfvars)
+cat > /etc/saf3ai/agent.env <<'EOF'
+%{ for key, value in agent_env ~}
+${key}=${value}
+%{ endfor ~}
+EOF
+
+cat > /etc/saf3ai/deploy.conf <<'EOF'
+REGION=${region}
+SECRET_ID=${secret_arn}
+REGISTRY=${registry}
+IMAGE=${image_uri}
+HOST_PORT=${service_port}
+EOF
+
+cat > /usr/local/bin/saf3ai-agent-deploy <<'EOF'
+#!/bin/bash
+# (Re)deploy the agent: reload the secret, pull the image, replace the container.
+# Re-run after pushing a new image or changing the secret:
+#   sudo /usr/local/bin/saf3ai-agent-deploy
+set -euo pipefail
+export HOME=/root
+source /etc/saf3ai/deploy.conf
+
+retry() {
+  local attempt
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    "$@" && return 0
+    echo "$1 failed (attempt $attempt) - retrying in 15s" >&2
+    sleep 15
+  done
+  return 1
+}
+
+load_secret() {
+  aws secretsmanager get-secret-value --region "$REGION" --secret-id "$SECRET_ID" \
+    --query SecretString --output text \
+    | jq -r 'to_entries[] | "\(.key)=\(.value)"' > /etc/saf3ai/secret.env
+}
+
+pull_image() {
+  aws ecr get-login-password --region "$REGION" \
+    | docker login --username AWS --password-stdin "$REGISTRY"
+  docker pull "$IMAGE"
+}
+
+umask 077
+retry load_secret
+retry pull_image
+
+docker rm -f saf3ai-agent >/dev/null 2>&1 || true
+docker run -d --name saf3ai-agent --restart unless-stopped \
+  -p "$HOST_PORT:8080" \
+  --env-file /etc/saf3ai/agent.env \
+  --env-file /etc/saf3ai/secret.env \
+  --log-opt max-size=10m --log-opt max-file=3 \
+  "$IMAGE"
+
+# Docker keeps the values in the container config; remove the plain-text copy.
+rm -f /etc/saf3ai/secret.env
+echo "saf3ai-agent started from $IMAGE"
+EOF
+chmod 700 /usr/local/bin/saf3ai-agent-deploy
+
+/usr/local/bin/saf3ai-agent-deploy

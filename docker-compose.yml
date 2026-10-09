@@ -1,0 +1,13 @@
+# Build and run the sample agent locally (or on any VM with Docker).
+#
+#   cp agent/.env.example agent/.env      # fill in SAF3AI_API_KEY + your LLM settings
+#   docker compose up --build
+#   curl -s localhost:8080/chat -H "Content-Type: application/json" -d '{"message":"Where is my order?"}'
+services:
+  agent:
+    build: ./agent
+    image: saf3ai-sample-agent:latest
+    env_file: ./agent/.env
+    ports:
+      - "8080:8080"
+    restart: unless-stopped

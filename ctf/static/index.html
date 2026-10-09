@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saf3AI CTF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --frame: #1A222F; --card: #1f2a3d; --border: #3d3d5c; --text: #E1E1E1; --muted: #AAB3BB;
+    --accent: #7B68EE; --blue: #589bff; --teal: #46D9C5; --danger: #FF6B8E;
+    --good: #34d399; --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--frame); color: var(--text);
+         font: 15px/1.5 Manrope, "Segoe UI", system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 16px; padding: 12px 20px;
+           border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .brand { font-weight: 700; font-size: 17px; }
+  .brand span { color: var(--accent); }
+  #clock { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 20px; }
+  #clock.waiting, #clock.ended { font-size: 14px; font-weight: 600; color: var(--muted); }
+  #clock.low { color: var(--danger); }
+  #me { color: var(--muted); font-size: 14px; }
+  #me b { color: var(--text); }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+       margin: 0 0 10px; font-weight: 600; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  button { font: inherit; font-weight: 600; color: #fff; background: var(--accent); border: 0;
+           border-radius: 8px; padding: 9px 16px; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  button.quiet { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  input, textarea { font: inherit; color: var(--text); background: var(--frame);
+                    border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; width: 100%; }
+  input:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+  textarea { resize: vertical; min-height: 64px; }
+
+  #join { max-width: 440px; margin: 8vh auto; padding: 0 16px; }
+  #join .card { display: grid; gap: 12px; }
+  #join h1 { font-size: 22px; margin: 0; }
+  #join p { margin: 0; color: var(--muted); }
+  .or { text-align: center; color: var(--muted); font-size: 13px; }
+  .msg { color: var(--danger); font-size: 14px; min-height: 20px; }
+
+  main { display: grid; grid-template-columns: 250px minmax(0, 1fr) 270px; gap: 16px; padding: 16px 20px; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+  .level { display: block; width: 100%; text-align: left; background: transparent; color: var(--text);
+           border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+  .level.on { border-color: var(--accent); background: rgba(123, 104, 238, .12); }
+  .level small { display: block; color: var(--muted); font-weight: 500; }
+  .level.solved small::after { content: "  solved"; color: var(--good); font-weight: 700; }
+
+  #brief p { margin: 4px 0 10px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+          border: 1px solid var(--border); color: var(--muted); }
+  .chip.block { color: var(--teal); border-color: var(--teal); }
+  #log { height: 46vh; min-height: 260px; overflow-y: auto; margin: 14px 0; padding-right: 4px;
+         display: flex; flex-direction: column; gap: 10px; }
+  .bubble { max-width: 86%; padding: 9px 13px; border-radius: 12px; white-space: pre-wrap;
+            overflow-wrap: anywhere; }
+  .you { align-self: flex-end; background: rgba(88, 155, 255, .16); border: 1px solid rgba(88, 155, 255, .4); }
+  .bot { align-self: flex-start; background: var(--frame); border: 1px solid var(--border); }
+  .note { align-self: center; font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px; }
+  .note.blocked { color: var(--danger); background: rgba(255, 107, 142, .12); }
+  .note.flagged { color: var(--warn); background: rgba(251, 191, 36, .12); }
+  .note.good { color: var(--good); background: rgba(52, 211, 153, .12); }
+  .note.info { color: var(--muted); }
+  .row { display: flex; gap: 8px; align-items: flex-start; }
+  .row > :first-child { flex: 1; }
+  #flagForm { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .count { color: var(--muted); font-size: 12px; text-align: right; margin-top: 4px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td { padding: 6px 4px; border-bottom: 1px solid var(--border); }
+  td:first-child { color: var(--muted); width: 28px; }
+  td:last-child { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  tr.mine td { color: var(--teal); }
+  ul.rules { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  ul.rules li { margin-bottom: 4px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Saf3<span>AI</span> CTF &middot; ShopBot</div>
+  <div id="clock" class="waiting"></div>
+  <div id="me"></div>
+</header>
+
+<section id="join" hidden>
+  <form class="card" id="joinForm">
+    <h1>Join the game</h1>
+    <p>Five levels. Each level protects a code in the form <b>FLAG{...}</b>. Your objective is to obtain it from ShopBot.</p>
+    <input id="name" placeholder="Team name" maxlength="24" autocomplete="off">
+    <input id="joinCode" placeholder="Join code from the organiser" autocomplete="off" hidden>
+    <button type="submit">Join</button>
+    <div class="or">or, to join a team that already exists</div>
+    <input id="teamCode" placeholder="Team code from a team-mate" autocomplete="off">
+    <div class="msg" id="joinMsg"></div>
+  </form>
+</section>
+
+<main id="game" hidden>
+  <aside>
+    <h2>Levels</h2>
+    <div id="levels"></div>
+  </aside>
+
+  <section class="card">
+    <div id="brief">
+      <h2 id="levelName"></h2>
+      <p id="levelBrief"></p>
+      <div class="chips" id="defences"></div>
+    </div>
+    <div id="log" aria-live="polite"></div>
+    <form id="chatForm">
+      <div class="row">
+        <textarea id="message" placeholder="Message ShopBot (Enter to send, Shift+Enter for a new line)"></textarea>
+        <button type="submit" id="send">Send</button>
+      </div>
+      <div class="count" id="count"></div>
+    </form>
+    <form id="flagForm" class="row">
+      <input id="flag" placeholder="FLAG{...}" autocomplete="off">
+      <button type="submit" class="quiet">Submit flag</button>
+    </form>
+  </section>
+
+  <aside>
+    <div class="card" style="margin-bottom:16px">
+      <h2>Scoreboard</h2>
+      <table><tbody id="board"></tbody></table>
+    </div>
+    <div class="card">
+      <h2>Rules</h2>
+      <ul class="rules">
+        <li>Attack ShopBot only: not this site, the server or other teams.</li>
+        <li>Each message is independent. ShopBot retains no conversation history.</li>
+        <li>Levels may be played in any order.</li>
+        <li>Share your team code with team-mates: <b id="myCode"></b></li>
+      </ul>
+    </div>
+  </aside>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let teamCode = localStorage.getItem("ctf_team_code") || "";
+let state = null, current = 1, secondsLeft = 0, busy = false;
+const logs = JSON.parse(sessionStorage.getItem("ctf_logs") || "{}");
+
+async function api(path, body) {
+  const options = { headers: { "X-Team-Code": teamCode } };
+  if (body) {
+    options.method = "POST";
+    options.headers["Content-Type"] = "application/json";
+    options.body = JSON.stringify(body);
+  }
+  try {
+    const response = await fetch(path, options);
+    return { status: response.status, data: await response.json().catch(() => ({})) };
+  } catch (error) {
+    return { status: 0, data: {} };
+  }
+}
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function add(level, kind, text) {
+  (logs[level] = logs[level] || []).push({ kind, text });
+  sessionStorage.setItem("ctf_logs", JSON.stringify(logs));
+  if (level === current) drawLog();
+}
+
+function drawLog() {
+  const box = $("log");
+  box.replaceChildren(...(logs[current] || []).map(item =>
+    el("div", item.kind === "you" || item.kind === "bot" ? "bubble " + item.kind : "note " + item.kind, item.text)));
+  box.scrollTop = box.scrollHeight;
+}
+
+function drawClock() {
+  const clock = $("clock"), status = state ? state.event.status : "waiting";
+  clock.className = status === "running" ? (secondsLeft <= 300 ? "low" : "") : status;
+  if (status === "waiting") clock.textContent = "Waiting for the organiser to start";
+  else if (status === "ended") clock.textContent = "Time is up. Scores are final.";
+  else clock.textContent = String(Math.floor(secondsLeft / 60)).padStart(2, "0") + ":" +
+                           String(secondsLeft % 60).padStart(2, "0");
+  const running = status === "running";
+  $("send").disabled = !running || busy;
+  $("message").disabled = !running;
+  $("flag").disabled = !running;
+}
+
+function draw() {
+  $("join").hidden = !!state.me;
+  $("game").hidden = !state.me;
+  $("joinCode").hidden = !state.join_code_required;
+  $("me").replaceChildren();
+  if (state.me) {
+    $("me").append(el("b", "", state.me.team), " · " + state.me.points + " / " + state.max_points + " pts");
+    $("myCode").textContent = teamCode;
+  }
+  $("levels").replaceChildren(...state.levels.map(level => {
+    const button = el("button", "level" + (level.id === current ? " on" : "") + (level.solved ? " solved" : ""),
+                      level.title);
+    button.type = "button";
+    button.append(el("small", "", "Level " + level.id + " · " + level.points + " pts"));
+    button.onclick = () => { current = level.id; draw(); drawLog(); };
+    return button;
+  }));
+  const level = state.levels.find(item => item.id === current);
+  $("levelName").textContent = "Level " + level.id + " · " + level.title;
+  $("levelBrief").textContent = level.brief;
+  $("defences").replaceChildren(
+    el("span", "chip", "Defences:"),
+    ...level.defences.map(text => el("span", "chip" + (text.includes("Saf3AI") ? " block" : ""), text)),
+    ...(level.saf3ai === "monitor" ? [el("span", "chip", "Saf3AI: monitor mode")] : []));
+  $("board").replaceChildren(...state.scoreboard.map(row => {
+    const tr = el("tr", state.me && row.team === state.me.team ? "mine" : "");
+    tr.append(el("td", "", row.rank), el("td", "", row.team), el("td", "", row.points));
+    return tr;
+  }));
+  drawClock();
+}
+
+async function refresh() {
+  const result = await api("/api/state");
+  if (result.status !== 200) return;
+  state = result.data;
+  secondsLeft = state.event.seconds_left;
+  if (teamCode && !state.me) {  // the organiser reset the event
+    teamCode = "";
+    localStorage.removeItem("ctf_team_code");
+    sessionStorage.removeItem("ctf_logs");
+    for (const key of Object.keys(logs)) delete logs[key];
+  }
+  draw();
+}
+
+const JOIN_ERRORS = {
+  wrong_join_code: "The join code is incorrect.", name_taken: "This team name is already in use.",
+  bad_name: "Team name: 2-24 characters (letters, digits, space, _ . -).",
+  unknown_team_code: "Team code not found." };
+
+$("joinForm").onsubmit = async event => {
+  event.preventDefault();
+  const code = $("teamCode").value.trim();
+  const body = code ? { team_code: code } : { name: $("name").value, join_code: $("joinCode").value };
+  const result = await api("/api/join", body);
+  if (result.status === 200) {
+    teamCode = result.data.team_code;
+    localStorage.setItem("ctf_team_code", teamCode);
+    $("joinMsg").textContent = "";
+    refresh();
+  } else {
+    $("joinMsg").textContent = JOIN_ERRORS[result.data.error] || "Unable to join. Please try again.";
+  }
+};
+
+const CHAT_ERRORS = {
+  event_waiting: "The event has not started yet.", event_ended: "Time is up.",
+  message_limit: "Your team has reached its message limit.",
+  llm_unavailable: "The model is temporarily unavailable. Please resend.",
+  bad_message: "The message is empty or exceeds the length limit.", join_first: "Join the game first." };
+
+$("chatForm").onsubmit = async event => {
+  event.preventDefault();
+  const text = $("message").value.trim(), level = current;
+  if (!text || busy) return;
+  busy = true; drawClock();
+  $("message").value = ""; $("count").textContent = "";
+  add(level, "you", text);
+  const result = await api("/api/chat", { level, message: text });
+  busy = false; drawClock();
+  const data = result.data;
+  if (result.status === 200) {
+    add(level, "bot", data.reply);
+    if (data.flagged.length)
+      add(level, "flagged", "Saf3AI detected: " + data.flagged.join(", ") + " (monitor mode: not blocked)");
+    if (state.me) state.me.messages += 1;
+  } else if (result.status === 403 && data.by === "saf3ai") {
+    add(level, "blocked", "Blocked by Saf3AI " + (data.stage === "prompt"
+      ? "before the model was called: " : "on the response: ") + data.reasons.join(", "));
+  } else if (result.status === 403) {
+    add(level, "blocked", "Blocked: the response contained the code.");
+  } else if (data.error === "slow_down") {
+    add(level, "info", "Rate limit: wait " + data.retry_after + " seconds between messages.");
+  } else {
+    add(level, "info", CHAT_ERRORS[data.error] || "An error occurred. Please try again.");
+  }
+  $("message").focus();
+};
+
+$("message").onkeydown = event => {
+  if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); $("chatForm").requestSubmit(); }
+};
+$("message").oninput = () => {
+  const max = state ? state.limits.max_chars : 800, used = $("message").value.length;
+  $("count").textContent = used ? used + " / " + max : "";
+};
+
+$("flagForm").onsubmit = async event => {
+  event.preventDefault();
+  const value = $("flag").value.trim(), level = current;
+  if (!value) return;
+  const result = await api("/api/flag", { level, flag: value });
+  if (result.status === 200 && result.data.correct) {
+    add(level, "good", result.data.already_solved ? "Correct. Your team had already solved this level."
+      : "Correct. +" + result.data.points + " points.");
+    $("flag").value = "";
+    refresh();
+  } else if (result.status === 200) {
+    add(level, "info", "Incorrect flag.");
+  } else if (result.data.error === "slow_down") {
+    add(level, "info", "Rate limit: wait a moment between flag attempts.");
+  } else {
+    add(level, "info", CHAT_ERRORS[result.data.error] || "An error occurred. Please try again.");
+  }
+};
+
+setInterval(refresh, 4000);
+setInterval(() => { if (state && state.event.status === "running" && secondsLeft > 0) { secondsLeft -= 1; drawClock(); } }, 1000);
+refresh().then(drawLog);
+</script>
+</body>
+</html>

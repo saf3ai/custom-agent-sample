@@ -1,0 +1,18 @@
+# Saf3AI SDK (PyPI)
+saf3ai-sdk==0.2.4
+
+# Agent framework. Tested with langchain 1.4.2.
+langchain>=1.4,<2
+
+# Chat model integrations - one per LLM_PROVIDER. Trim to the one you use.
+langchain-google-genai>=4,<5   # google-genai
+langchain-openai>=1,<2         # openai
+langchain-anthropic>=1,<2      # anthropic
+
+# HTTP service
+fastapi>=0.110
+uvicorn>=0.29
+python-dotenv>=1.0
+
+# Do NOT add google-adk or crewai: the Saf3AI SDK picks its integration from the
+# installed packages, and either one takes priority over LangChain.

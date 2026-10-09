@@ -1,0 +1,13 @@
+# Saf3AI SDK (PyPI)
+saf3ai-sdk==0.2.4
+
+# Agent framework (brings the Gemini client, google-genai). Tested with 2.9.2.
+google-adk>=2.9,<3
+
+# HTTP service
+fastapi>=0.110
+uvicorn>=0.29
+python-dotenv>=1.0
+
+# Do NOT add crewai or langchain-core: the Saf3AI SDK picks its integration from
+# the installed packages.

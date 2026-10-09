@@ -1,0 +1,70 @@
+#cloud-config
+# Saf3AI sample agent on a new Linux VM (Ubuntu 22.04 / 24.04).
+# Paste as: EC2 "User data" | Azure "Custom data" | GCE metadata key "user-data".
+#
+# Before pasting:
+#   1. Set IMAGE in the systemd unit below.
+#   2. Fill agent.env - or keep real keys out of user data and fetch them from
+#      your cloud secret store (ExecStartPre line; see README.md).
+#   3. Private registry: uncomment the matching login line under runcmd.
+
+package_update: true
+packages:
+  - docker.io
+
+write_files:
+  - path: /etc/saf3ai-agent/agent.env
+    owner: root:root
+    permissions: "0600"
+    content: |
+      # docker --env-file format: KEY=value, no quotes, no empty values
+      SAF3AI_API_KEY=<SAF3AI_API_KEY>
+      SAF3AI_COLLECTOR_AGENT=https://analyzer.saf3ai.com/v1/traces
+      SAF3AI_SCANNER_ENDPOINT=https://scanner.saf3ai.com
+      SAF3AI_AGENT_ID=sample-support-agent
+      SAF3AI_SERVICE_NAME=sample-support-agent
+      SAF3AI_ENVIRONMENT=production
+      SAF3AI_ENFORCEMENT=block
+      SAF3AI_FAIL_MODE=open
+      # mock = no LLM key (smoke test). Options: see agent/.env.example in the kit.
+      LLM_PROVIDER=mock
+      # LLM_MODEL=<MODEL_ID>
+      # <PROVIDER_KEY_VAR>=<VALUE>
+      WEB_CONCURRENCY=1
+
+  - path: /etc/systemd/system/saf3ai-agent.service
+    owner: root:root
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Saf3AI sample agent (Docker)
+      Wants=network-online.target
+      After=network-online.target docker.service
+      Requires=docker.service
+
+      [Service]
+      Environment=IMAGE=<REGISTRY>/saf3ai-sample-agent:1.0.0
+      # Optional: refresh agent.env from your cloud secret store on every start (see README.md)
+      # ExecStartPre=-/bin/sh -c 'umask 077; <FETCH_COMMAND> > /etc/saf3ai-agent/agent.env.tmp && mv /etc/saf3ai-agent/agent.env.tmp /etc/saf3ai-agent/agent.env'
+      ExecStartPre=-/usr/bin/docker rm -f saf3ai-agent
+      ExecStartPre=-/usr/bin/docker pull ${IMAGE}
+      ExecStart=/usr/bin/docker run --rm --name saf3ai-agent \
+        --env-file /etc/saf3ai-agent/agent.env -p 8080:8080 \
+        --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges \
+        ${IMAGE}
+      ExecStop=/usr/bin/docker stop saf3ai-agent
+      Restart=always
+      RestartSec=5
+      TimeoutStartSec=300
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - systemctl enable --now docker
+  # Private registry - log Docker in (the VM's cloud identity must allow pulls):
+  # - aws ecr get-login-password --region <AWS_REGION> | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com
+  # - az login --identity && az acr login --name <ACR_NAME>
+  # - gcloud auth configure-docker <REGION>-docker.pkg.dev --quiet
+  - systemctl daemon-reload
+  - systemctl enable --now saf3ai-agent
