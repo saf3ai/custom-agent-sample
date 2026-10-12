@@ -10,6 +10,7 @@ Pick **one LLM** and **one target** — any combination works with the same imag
 | `deploy.py` | **Guided deploy**: step-by-step choice of cloud, service, framework and LLM, then build, deploy and verify |
 | `agent/` | The sample agent (Python, FastAPI). All Saf3AI code is in one file: `saf3ai_setup.py` |
 | `agent-variants/` | The same agent built on Google ADK, LangChain, CrewAI, OpenAI Agents SDK |
+| `ctf/` | A one-hour capture-the-flag on the LangChain agent: five levels, scoreboard, organiser page |
 | `deploy/` | One folder per target — Terraform / manifests / scripts + README |
 | `docs/` | Provider matrix · target matrix · network & data flow · verify & troubleshoot |
 | `docker-compose.yml` | Build and run locally in one command |

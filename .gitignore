@@ -19,3 +19,6 @@ venv/
 saf3ai-deploy.json
 *.auto.tfvars.json
 deploy/hugging-face-spaces/build/
+
+# CTF scores (SQLite) from local runs
+ctf/data/
