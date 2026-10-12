@@ -295,7 +295,7 @@ Then complete the three checks that need a person:
 
 1. **Player link**, in a browser inside `PLAYER_CIDR`: you see **Join the game**.
 2. **Organiser page:** paste the admin token. You see the answer key (five flags), the scoreboard and the controls.
-3. **Saf3AI console:** **Custom Agents → Monitoring → Log Tracer**, agent = your `AGENT_NAME`. You see the test messages from a user whose name starts with `Preflight`.
+3. **Saf3AI console:** **Custom Agents → Conversations**, time range **1D**. You see the test messages from a user whose name starts with `Preflight`.
 
 ## 1.9 Rehearse the levels
 
@@ -304,6 +304,36 @@ How hard each level is depends on the model. Press **Start** on the organiser pa
 - Level 1 should disclose the code on a direct request.
 - Levels 2 and 3 should refuse a direct request and be solvable with the approaches in the hints.
 - If your model behaves differently, change the model or adjust the level prompts in `levels.py`.
+
+## 1.10 Optional: fill the console with sample data
+
+To see the Saf3AI console with data before any player joins, run `aws/fill-dashboard.sh`. Six simulated teams send 192 messages across the five levels: ordinary questions and attack prompts. It then resets the game.
+
+```bash
+on_instance "bash /opt/custom-agent-sample/ctf/aws/fill-dashboard.sh"
+```
+
+**Expect** six `DONE` lines and `FILL_OK`, after about five minutes:
+
+```text
+DONE  Atlas-21044-0  sent 32  answered 18  detected 8  blocked 6  errors 0
+DONE  Borealis-21044-1  sent 32  answered 18  detected 8  blocked 6  errors 0
+...
+FILL_OK  6 teams, 192 messages
+```
+
+The counts depend on your model and on the policies enabled for your tenant.
+
+Then open the Saf3AI console, **Custom Agents**:
+
+| Page | What you see |
+|---|---|
+| Conversations | One conversation per team and level, with the model, the tokens and the tool calls |
+| Security → Signals | A signal for each detected or blocked prompt |
+| Recommendations | Press **Re-evaluate**. Recommendations based on this traffic appear |
+
+- The script refuses to run while an event is in progress, and after teams have joined, because it resets the game when it finishes.
+- For more data, add the number of teams and rounds: `on_instance "bash /opt/custom-agent-sample/ctf/aws/fill-dashboard.sh 8 3"`.
 
 ---
 
@@ -356,7 +386,7 @@ Give each hint to all teams at the same time. Omit a hint if most teams have sol
 | 0 to 2 | The scoreboard | Announce the winners. A tie is decided by the earlier time |
 | 2 to 6 | Organiser page: **Successful prompts** | Present two or three successful prompts from levels 2 and 3 |
 | 6 to 10 | Organiser page: **Attempts by level** | Levels 2 and 4 are the same agent. On level 2 Saf3AI detected the attack and allowed it, because it was in monitor mode. On level 4 the same message did not reach the model |
-| 10 to 13 | Saf3AI console: **Log Tracer** for your `AGENT_NAME` | Every attempt from the event is recorded here, by team: what was sent, what was detected, what was blocked |
+| 10 to 13 | Saf3AI console: **Custom Agents → Conversations** for your `AGENT_NAME` | Every attempt from the event is recorded here, by team: what was sent, what was detected, what was blocked |
 | 13 to 15 | | Questions |
 
 ## 2.5 Troubleshooting

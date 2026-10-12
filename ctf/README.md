@@ -41,6 +41,7 @@ Each level protects a flag (`FLAG{...}`) with one more layer of defence. Saf3AI 
 | `static/admin.html` | Organiser page: start, stop, reset, answer key, numbers for the debrief | No |
 | `aws/start.sh` | On the EC2 instance: build the image, read the settings, start the game | No |
 | `aws/preflight.sh` | On the EC2 instance: ten end-to-end checks, then reset | No |
+| `aws/fill-dashboard.sh` | On the EC2 instance: simulated teams send sample traffic, so the Saf3AI console has data to show, then reset | No |
 
 ## How Saf3AI hooks in
 
@@ -51,7 +52,7 @@ Each level protects a flag (`FLAG{...}`) with one more layer of defence. Saf3AI 
 | `run_turn(..., block_responses=True)` | Level 5: the response is also scanned, and blocked if flagged |
 | `@saf3ai_setup.traced_tool` | A span per tool call, inside the turn |
 
-Each turn is traced to your Saf3AI tenant (console: **Custom Agents → Monitoring → Log Tracer**, agent `SAF3AI_AGENT_ID`) with:
+Each turn is traced to your Saf3AI tenant (console: **Custom Agents → Conversations**, agent `SAF3AI_AGENT_ID`) with:
 
 - a conversation id per team and level, so a team's attempts on a level sit together;
 - the team name as the user;
